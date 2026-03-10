@@ -1,19 +1,89 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Home from '../views/Home.vue'
-import About from '../views/About.vue'
+import MainLayout from '../layouts/MainLayout.vue'
+import BedLayout from '../views/BedLayout.vue'
+import Placeholder from '../views/Placeholder.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
-      name: 'home',
-      component: Home,
-    },
-    {
-      path: '/about',
-      name: 'about',
-      component: About,
+      component: MainLayout,
+      redirect: '/bed-layout',
+      children: [
+        {
+          path: 'bed-layout',
+          name: 'bed-layout',
+          component: BedLayout,
+          meta: { title: '床位示意图' },
+        },
+        {
+          path: 'bed-manage',
+          name: 'bed-manage',
+          component: Placeholder,
+          meta: { title: '床位管理' },
+        },
+        {
+          path: 'admission',
+          name: 'admission',
+          component: Placeholder,
+          meta: { title: '入住登记' },
+        },
+        {
+          path: 'outing',
+          name: 'outing',
+          component: Placeholder,
+          meta: { title: '外出登记' },
+        },
+        {
+          path: 'discharge',
+          name: 'discharge',
+          component: Placeholder,
+          meta: { title: '退住登记' },
+        },
+        {
+          path: 'care-record',
+          name: 'care-record',
+          component: Placeholder,
+          meta: { title: '护理记录' },
+        },
+        {
+          path: 'care-level',
+          name: 'care-level',
+          component: Placeholder,
+          meta: { title: '护理级别' },
+        },
+        {
+          path: 'care-items',
+          name: 'care-items',
+          component: Placeholder,
+          meta: { title: '护理项目' },
+        },
+        {
+          path: 'client-care',
+          name: 'client-care',
+          component: Placeholder,
+          meta: { title: '客户护理设置' },
+        },
+        {
+          path: 'service-target',
+          name: 'service-target',
+          component: Placeholder,
+          meta: { title: '设置服务对象' },
+        },
+        {
+          path: 'service-focus',
+          name: 'service-focus',
+          component: Placeholder,
+          meta: { title: '服务关注' },
+        },
+        {
+          path: 'basic-data',
+          name: 'basic-data',
+          component: Placeholder,
+          meta: { title: '基础数据维护' },
+        },
+      ],
     },
   ],
 })
