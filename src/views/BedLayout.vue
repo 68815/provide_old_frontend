@@ -1,13 +1,13 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { roomApi } from '../api'
 import { ElMessage } from 'element-plus'
 
 const loading = ref(false)
-const currentFloor = ref('一层')
+const currentFloor = ref('一楼')
 const bedData = ref(null)
 
-const floorOptions = ['一层', '二层', '三层']
+const floorOptions = ['一楼', '二楼', '三楼']
 
 const stats = ref({
   total: 0,
@@ -15,6 +15,12 @@ const stats = ref({
   yr: 0,
   wc: 0
 })
+
+const specialRooms = [
+  { id: 'special-1', name: '电梯厅', icon: '🛗' },
+  { id: 'special-2', name: '洗衣房', icon: '🧺' },
+  { id: 'special-3', name: '活动中心', icon: '🎭' }
+]
 
 const fetchData = async () => {
   loading.value = true
@@ -25,8 +31,8 @@ const fetchData = async () => {
       stats.value = {
         total: res.data.zcw || 0,
         kx: res.data.kx || 0,
-        yr: res.data.yr || 1,
-        wc: res.data.wc || 1
+        yr: res.data.yr || 0,
+        wc: res.data.wc || 0
       }
     }
   } finally {
@@ -53,37 +59,38 @@ onMounted(() => {
 
 <template>
   <div class="bed-layout-page">
-    <div class="filter-bar">
-      <div class="filter-left">
-        <span class="label">楼层：</span>
-        <el-select v-model="currentFloor" placeholder="请选择楼层" style="width: 140px" @change="fetchData">
-          <el-option v-for="floor in floorOptions" :key="floor" :label="floor" :value="floor" />
+    <div class="header-bar">
+      <div class="floor-tabs">
+        <el-select v-model="currentFloor" @change="fetchData" placeholder="楼层选择" style="width: 120px">
+          <el-option
+            v-for="floor in floorOptions"
+            :key="floor"
+            :label="floor"
+            :value="floor"
+          />
         </el-select>
       </div>
       <div class="stats-bar">
-        <div class="stat-item">
-          <span class="stat-icon total">🛏</span>
-          <span>总床位: {{ stats.total }}</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-icon free">🛏</span>
-          <span>空闲: {{ stats.kx }}</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-icon occupied">👤</span>
-          <span>有人: {{ stats.yr }}</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-icon outing">🚶</span>
-          <span>外出: {{ stats.wc }}</span>
-        </div>
+        <span class="stat-tag total">总床位: {{ stats.total }}</span>
+        <span class="stat-tag free">空闲: {{ stats.kx }}</span>
+        <span class="stat-tag occupied">有人: {{ stats.yr }}</span>
+        <span class="stat-tag outing">外出: {{ stats.wc }}</span>
       </div>
     </div>
 
     <div class="bed-grid-wrap" v-loading="loading">
-      <div class="room-grid">
-        <div v-for="room in bedData?.roomList || []" :key="room.id" class="room-card">
-          <div class="room-header">房间 {{ room.roomNo }}</div>
+      <div class="room-grid" v-if="bedData?.roomList?.length">
+        <div class="room-card special-room empty-slot"></div>
+        <div 
+          v-for="room in specialRooms" 
+          :key="room.id" 
+          class="room-card special-room"
+        >
+          <div class="room-icon">{{ room.icon }}</div>
+          <div class="room-name">{{ room.name }}</div>
+        </div>
+        <div v-for="room in bedData.roomList" :key="room.id" class="room-card">
+          <div class="room-header">{{ room.roomNo }} 房间</div>
           <div class="bed-list">
             <div 
               v-for="bed in room.bedList || []" 
@@ -97,6 +104,7 @@ onMounted(() => {
           </div>
         </div>
       </div>
+      <el-empty v-else description="暂无床位数据" />
     </div>
   </div>
 </template>
@@ -106,68 +114,75 @@ onMounted(() => {
   background: #fff;
   border-radius: 8px;
   padding: 20px;
-  min-height: 400px;
+  min-height: calc(100vh - 140px);
 }
-.filter-bar {
+.header-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 20px;
-  flex-wrap: wrap;
-  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #ebeef5;
 }
-.filter-left {
+.floor-tabs {
   display: flex;
   align-items: center;
-  gap: 8px;
-}
-.filter-left .label {
-  font-size: 14px;
-  color: #606266;
 }
 .stats-bar {
   display: flex;
   align-items: center;
-  gap: 24px;
-  flex-wrap: wrap;
+  gap: 12px;
 }
-.stat-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.stat-tag {
+  padding: 6px 16px;
+  border-radius: 4px;
   font-size: 14px;
-  color: #303133;
+  color: #fff;
 }
-.stat-icon {
-  font-size: 16px;
+.stat-tag.total {
+  background: #909399;
+}
+.stat-tag.free {
+  background: #67c23a;
+}
+.stat-tag.occupied {
+  background: #409eff;
+}
+.stat-tag.outing {
+  background: #e6a23c;
+}
+.bed-grid-wrap {
+  min-height: 300px;
 }
 .room-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px));
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   gap: 16px;
 }
 .room-card {
   background: #f5f7fa;
   border-radius: 8px;
-  padding: 12px;
-  border: 1px solid #e4e7ed;
+  padding: 10px;
+  border: 1px solid #dcdfe6;
 }
 .room-header {
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   color: #303133;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   text-align: center;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed #dcdfe6;
 }
 .bed-list {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
+  justify-content: center;
 }
 .bed-item {
-  flex: 1;
-  min-width: 60px;
-  padding: 16px 8px;
+  width: 60px;
+  padding: 8px 6px;
   border-radius: 6px;
   text-align: center;
   cursor: pointer;
@@ -175,19 +190,22 @@ onMounted(() => {
 }
 .bed-item:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 .bed-no {
   font-size: 13px;
-  font-weight: 500;
-  margin-bottom: 4px;
+  font-weight: 600;
+  margin-bottom: 2px;
 }
 .bed-status {
-  font-size: 12px;
+  font-size: 11px;
 }
 .status-free {
   background: #f0f9eb;
   border: 2px solid #67c23a;
+}
+.status-free .bed-no {
+  color: #67c23a;
 }
 .status-free .bed-status {
   color: #67c23a;
@@ -196,6 +214,9 @@ onMounted(() => {
   background: #ecf5ff;
   border: 2px solid #409eff;
 }
+.status-occupied .bed-no {
+  color: #409eff;
+}
 .status-occupied .bed-status {
   color: #409eff;
 }
@@ -203,7 +224,33 @@ onMounted(() => {
   background: #fdf6ec;
   border: 2px solid #e6a23c;
 }
+.status-outing .bed-no {
+  color: #e6a23c;
+}
 .status-outing .bed-status {
   color: #e6a23c;
+}
+.special-room {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+}
+.special-room.empty-slot {
+  background: transparent;
+  border: 2px dashed #dcdfe6;
+  padding: 12px 16px;
+}
+.room-icon {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+.room-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
 }
 </style>
