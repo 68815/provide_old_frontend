@@ -1,11 +1,12 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { customerApi, careLevelApi } from '../api'
+import { useDataStore } from '../stores/data'
+import { customerApi } from '../api'
 import { ElMessage } from 'element-plus'
 
+const dataStore = useDataStore()
 const loading = ref(false)
 const customerList = ref([])
-const careLevels = ref([])
 const dialogVisible = ref(false)
 const currentCustomer = ref(null)
 
@@ -21,8 +22,7 @@ const fetchData = async () => {
   try {
     const res = await customerApi.getCustomerList({ pageSize: 50 })
     customerList.value = res.data.list
-    const levelRes = await careLevelApi.getCareLevelList()
-    careLevels.value = levelRes.data.list
+    await dataStore.fetchCareLevels()
   } finally {
     loading.value = false
   }
@@ -45,6 +45,7 @@ const handleSubmit = async () => {
   })
   ElMessage.success('配置成功')
   dialogVisible.value = false
+  dataStore.clearCache('customers')
   fetchData()
 }
 
@@ -95,7 +96,7 @@ onMounted(() => {
       <el-form :model="form" label-width="100px" style="margin-top: 20px">
         <el-form-item label="护理级别">
           <el-select v-model="form.careLevel" placeholder="请选择护理级别" style="width: 100%">
-            <el-option v-for="level in careLevels" :key="level.id" :label="level.name" :value="level.name" />
+            <el-option v-for="level in dataStore.careLevels" :key="level.id" :label="level.name" :value="level.name" />
           </el-select>
         </el-form-item>
         <el-form-item label="额外护理项目">

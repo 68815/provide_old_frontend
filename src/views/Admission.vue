@@ -1,12 +1,13 @@
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { customerApi, careLevelApi } from '../api'
+import { useDataStore } from '../stores/data'
+import { customerApi } from '../api'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
+const dataStore = useDataStore()
 const loading = ref(false)
-const careLevels = ref([])
 
 const form = reactive({
   name: '',
@@ -48,12 +49,9 @@ for (let floor = 1; floor <= 3; floor++) {
   }
 }
 
-const fetchCareLevels = async () => {
-  const res = await careLevelApi.getCareLevelList()
-  careLevels.value = res.data.list
-}
-
-fetchCareLevels()
+onMounted(async () => {
+  await dataStore.fetchCareLevels()
+})
 
 const handleSubmit = async () => {
   const valid = await formRef.value.validate().catch(() => false)
@@ -63,6 +61,7 @@ const handleSubmit = async () => {
   try {
     await customerApi.addCustomer(form)
     ElMessage.success('入住登记成功')
+    dataStore.clearCache('customers')
     router.push('/customer-list')
   } finally {
     loading.value = false
@@ -135,7 +134,7 @@ const handleCancel = () => {
         <el-col :span="12">
           <el-form-item label="护理级别" prop="careLevel">
             <el-select v-model="form.careLevel" placeholder="请选择护理级别" style="width: 100%">
-              <el-option v-for="level in careLevels" :key="level.id" :label="level.name" :value="level.name" />
+              <el-option v-for="level in dataStore.careLevels" :key="level.id" :label="level.name" :value="level.name" />
             </el-select>
           </el-form-item>
         </el-col>

@@ -1,14 +1,15 @@
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useDataStore } from '../stores/data'
 import { healthButlerApi, customerApi } from '../api'
 import { ElMessage } from 'element-plus'
 
+const dataStore = useDataStore()
 const loading = ref(false)
 const butlerList = ref([])
 const dialogVisible = ref(false)
 const currentButler = ref(null)
 
-const customers = ref([])
 const selectedCustomers = ref([])
 
 const fetchData = async () => {
@@ -16,8 +17,7 @@ const fetchData = async () => {
   try {
     const res = await healthButlerApi.getButlerList()
     butlerList.value = res.data.list
-    const customerRes = await customerApi.getCustomerList({ pageSize: 100, status: '在住' })
-    customers.value = customerRes.data.list
+    await dataStore.fetchCustomers()
   } finally {
     loading.value = false
   }
@@ -81,7 +81,7 @@ onMounted(() => {
       </div>
       <el-transfer
         v-model="selectedCustomers"
-        :data="customers.map(c => ({ key: c.id, label: `${c.name} (${c.bedNo})` }))"
+        :data="dataStore.customers.map(c => ({ key: c.id, label: `${c.name} (${c.bedNo})` }))"
         :titles="['可选客户', '已选客户']"
         style="margin-top: 20px"
       />

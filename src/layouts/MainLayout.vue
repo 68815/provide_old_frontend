@@ -1,65 +1,36 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useTabsStore } from '../stores/tabs'
+import { useUserStore } from '../stores/user'
+import { ElMessageBox, ElMessage } from 'element-plus'
 
 const router = useRouter()
 const route = useRoute()
+const tabsStore = useTabsStore()
+const userStore = useUserStore()
 
-// 可关闭的标签页（path -> name）
-const tabMap = {
-  '/bed-layout': '床位示意图',
-  '/bed-manage': '床位管理',
-  '/customer-list': '客户信息',
-  '/admission': '入住登记',
-  '/care-record': '护理记录',
-  '/outing': '外出登记',
-  '/discharge': '退住登记',
-  '/care-level': '护理级别',
-  '/care-items': '护理项目',
-  '/client-care': '客户护理设置',
-  '/service-target': '设置服务对象',
-  '/service-focus': '服务关注',
-  '/user-manage': '用户管理',
-  '/basic-data': '基础数据维护',
-}
-
-const openTabs = ref([
-  { path: '/bed-layout', name: '床位示意图' },
-  { path: '/bed-manage', name: '床位管理' },
-  { path: '/admission', name: '入住登记' },
-  { path: '/care-record', name: '护理记录' },
-  { path: '/outing', name: '外出登记' },
-])
-
-// 路由变化时若为新路径则加入标签页
 watch(
   () => route.path,
   (path) => {
-    const name = tabMap[path]
-    if (name && !openTabs.value.some((t) => t.path === path)) {
-      openTabs.value.push({ path, name })
-    }
+    tabsStore.setCurrentPath(path)
   },
   { immediate: true }
 )
 
-const activeTab = computed(() => route.path)
+const activeTab = computed(() => tabsStore.currentPath)
 
 function goTab(path) {
   router.push(path)
 }
 
 function closeTab(path) {
-  const idx = openTabs.value.findIndex((t) => t.path === path)
-  if (idx === -1) return
-  openTabs.value.splice(idx, 1)
-  if (route.path === path && openTabs.value.length) {
-    const next = openTabs.value[Math.min(idx, openTabs.value.length - 1)]
-    router.push(next.path)
+  const nextPath = tabsStore.closeTab(path)
+  if (nextPath) {
+    router.push(nextPath)
   }
 }
 
-// 侧边栏菜单配置
 const menuItems = [
   {
     title: '床位管理',
@@ -104,12 +75,28 @@ const menuItems = [
 
 const userMenuItems = [
   { label: '个人中心', command: 'profile' },
+  { label: '修改密码', command: 'password' },
   { label: '退出登录', command: 'logout' },
 ]
 
 function handleUserCommand(cmd) {
-  if (cmd === 'logout') {
-    // 可接入真实登出
+  switch (cmd) {
+    case 'logout':
+      ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        userStore.logout()
+        ElMessage.success('已退出登录')
+      }).catch(() => {})
+      break
+    case 'profile':
+      ElMessage.info('个人中心功能开发中...')
+      break
+    case 'password':
+      ElMessage.info('修改密码功能开发中...')
+      break
   }
 }
 </script>
@@ -126,7 +113,7 @@ function handleUserCommand(cmd) {
         </div>
         <div class="tabs-wrap">
           <div
-            v-for="tab in openTabs"
+            v-for="tab in tabsStore.openTabs"
             :key="tab.path"
             class="tab-item"
             :class="{ active: activeTab === tab.path }"
@@ -140,7 +127,7 @@ function handleUserCommand(cmd) {
       <div class="header-right">
         <el-dropdown trigger="click" @command="handleUserCommand">
           <span class="user-dropdown">
-            admin
+            {{ userStore.username }}
             <span class="arrow-down">▼</span>
           </span>
           <template #dropdown>

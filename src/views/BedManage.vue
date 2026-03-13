@@ -1,7 +1,9 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
+import { useDataStore } from '../stores/data'
 import { bedApi } from '../api'
 
+const dataStore = useDataStore()
 const loading = ref(false)
 const bedList = ref([])
 const currentFloor = ref('')
