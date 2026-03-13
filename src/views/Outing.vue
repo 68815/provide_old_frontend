@@ -1,18 +1,38 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { outwardApi } from '../api'
+import { outwardApi, customerApi } from '../api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const loading = ref(false)
 const outingList = ref([])
+const customers = ref([])
 
 const fetchData = async () => {
   loading.value = true
   try {
-    const res = await outwardApi.getOutwardList({})
-    if (res.flag && res.data) {
-      outingList.value = res.data.records || res.data
+    const [outwardRes, customerRes] = await Promise.all([
+      outwardApi.getOutwardList({}),
+      customerApi.getCustomerList({ page: 1 })
+    ])
+    
+    if (customerRes.flag && customerRes.data) {
+      customers.value = customerRes.data.records || customerRes.data
     }
+    
+    if (outwardRes.flag && outwardRes.data) {
+      const records = Array.isArray(outwardRes.data) ? outwardRes.data : (outwardRes.data.records || [])
+      outingList.value = records.map(item => {
+        const customer = customers.value.find(c => c.id === item.customerId || c.id === item.customer_id)
+        return {
+          ...item,
+          customerId: item.customerId || item.customer_id,
+          customerName: item.customerName || customer?.customerName || '-',
+          bedNo: item.bedNo || customer?.bedNo || '-'
+        }
+      })
+    }
+  } catch (e) {
+    console.error('获取数据失败:', e)
   } finally {
     loading.value = false
   }
@@ -20,12 +40,12 @@ const fetchData = async () => {
 
 const getStatusText = (status) => {
   const map = { 0: '待审批', 1: '已批准', 2: '已拒绝' }
-  return map[status] || '未知'
+  return map[status] ?? '未知'
 }
 
 const getStatusType = (status) => {
   const map = { 0: 'warning', 1: 'success', 2: 'danger' }
-  return map[status] || 'info'
+  return map[status] ?? 'info'
 }
 
 const handleApprove = (row) => {
@@ -72,18 +92,18 @@ onMounted(() => {
     </div>
 
     <el-table :data="outingList" v-loading="loading" stripe style="width: 100%">
-      <el-table-column prop="customerName" label="客户姓名" width="100" />
-      <el-table-column prop="bedNo" label="床位号" width="120" />
-      <el-table-column prop="outgoingreason" label="外出原因" />
-      <el-table-column prop="outgoingtime" label="外出时间" width="160" />
-      <el-table-column prop="expectedreturntime" label="预计返回时间" width="160" />
-      <el-table-column prop="escorted" label="陪同人" width="100" />
-      <el-table-column prop="auditstatus" label="状态" width="100">
+      <el-table-column prop="customerName" label="客户姓名" min-width="100" />
+      <el-table-column prop="bedNo" label="床位号" min-width="100" />
+      <el-table-column prop="outgoingreason" label="外出原因" min-width="150" />
+      <el-table-column prop="outgoingtime" label="外出时间" min-width="160" />
+      <el-table-column prop="expectedreturntime" label="预计返回时间" min-width="160" />
+      <el-table-column prop="escorted" label="陪同人" min-width="100" />
+      <el-table-column prop="auditstatus" label="状态" min-width="100">
         <template #default="{ row }">
           <el-tag :type="getStatusType(row.auditstatus)" size="small">{{ getStatusText(row.auditstatus) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="180" fixed="right">
+      <el-table-column label="操作" min-width="120">
         <template #default="{ row }">
           <template v-if="row.auditstatus === 0">
             <el-button type="success" link size="small" @click="handleApprove(row)">批准</el-button>

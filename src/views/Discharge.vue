@@ -1,18 +1,38 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { backdownApi } from '../api'
+import { backdownApi, customerApi } from '../api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const loading = ref(false)
 const dischargeList = ref([])
+const customers = ref([])
 
 const fetchData = async () => {
   loading.value = true
   try {
-    const res = await backdownApi.getBackdownList({})
-    if (res.flag && res.data) {
-      dischargeList.value = res.data.records || res.data
+    const [backdownRes, customerRes] = await Promise.all([
+      backdownApi.getBackdownList({}),
+      customerApi.getCustomerList({ page: 1 })
+    ])
+    
+    if (customerRes.flag && customerRes.data) {
+      customers.value = customerRes.data.records || customerRes.data
     }
+    
+    if (backdownRes.flag && backdownRes.data) {
+      const records = Array.isArray(backdownRes.data) ? backdownRes.data : (backdownRes.data.records || [])
+      dischargeList.value = records.map(item => {
+        const customer = customers.value.find(c => c.id === item.customerId || c.id === item.customer_id)
+        return {
+          ...item,
+          customerId: item.customerId || item.customer_id,
+          customerName: item.customerName || customer?.customerName || '-',
+          bedNo: item.bedNo || customer?.bedNo || '-'
+        }
+      })
+    }
+  } catch (e) {
+    console.error('获取数据失败:', e)
   } finally {
     loading.value = false
   }
@@ -20,17 +40,17 @@ const fetchData = async () => {
 
 const getStatusText = (status) => {
   const map = { 0: '待审批', 1: '已批准', 2: '已完成' }
-  return map[status] || '未知'
+  return map[status] ?? '未知'
 }
 
 const getStatusType = (status) => {
   const map = { 0: 'warning', 1: 'success', 2: 'info' }
-  return map[status] || 'info'
+  return map[status] ?? 'info'
 }
 
 const getTypeText = (type) => {
-  const map = { 1: '正常退住', 2: '转院', 3: '去世' }
-  return map[type] || '未知'
+  const map = { 0: '正常退住', 1: '转院', 2: '去世' }
+  return map[type] ?? '未知'
 }
 
 const handleApprove = (row) => {
@@ -61,20 +81,20 @@ onMounted(() => {
     </div>
 
     <el-table :data="dischargeList" v-loading="loading" stripe style="width: 100%">
-      <el-table-column prop="customerName" label="客户姓名" width="100" />
-      <el-table-column prop="bedNo" label="床位号" width="120" />
-      <el-table-column prop="retreattype" label="退住类型" width="100">
+      <el-table-column prop="customerName" label="客户姓名" min-width="100" />
+      <el-table-column prop="bedNo" label="床位号" min-width="100" />
+      <el-table-column prop="retreattype" label="退住类型" min-width="100">
         <template #default="{ row }">
-          <el-tag size="small" :type="row.retreattype === 3 ? 'danger' : 'info'">{{ getTypeText(row.retreattype) }}</el-tag>
+          <el-tag size="small" :type="row.retreattype === 2 ? 'danger' : 'info'">{{ getTypeText(row.retreattype) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="retreattime" label="退住时间" width="160" />
-      <el-table-column prop="auditstatus" label="状态" width="100">
+      <el-table-column prop="retreattime" label="退住时间" min-width="160" />
+      <el-table-column prop="auditstatus" label="状态" min-width="100">
         <template #default="{ row }">
           <el-tag :type="getStatusType(row.auditstatus)" size="small">{{ getStatusText(row.auditstatus) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="150" fixed="right">
+      <el-table-column label="操作" min-width="100">
         <template #default="{ row }">
           <template v-if="row.auditstatus === 0">
             <el-button type="success" link size="small" @click="handleApprove(row)">批准</el-button>
