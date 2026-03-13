@@ -1,25 +1,19 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { 
-  customerApi, 
-  careLevelApi, 
-  careItemApi, 
-  healthButlerApi,
-  bedApi 
-} from '../api'
+import { customerApi, nurseLevelApi, nurseItemApi, userApi, bedApi } from '../api'
 
 export const useDataStore = defineStore('data', () => {
   const customers = ref([])
   const careLevels = ref([])
   const careItems = ref([])
-  const butlers = ref([])
+  const users = ref([])
   const beds = ref([])
 
   const loading = ref({
     customers: false,
     careLevels: false,
     careItems: false,
-    butlers: false,
+    users: false,
     beds: false
   })
 
@@ -27,7 +21,7 @@ export const useDataStore = defineStore('data', () => {
     customers: 0,
     careLevels: 0,
     careItems: 0,
-    butlers: 0,
+    users: 0,
     beds: 0
   })
 
@@ -43,9 +37,11 @@ export const useDataStore = defineStore('data', () => {
     }
     loading.value.customers = true
     try {
-      const res = await customerApi.getCustomerList({ pageSize: 100 })
-      customers.value = res.data.list
-      lastFetchTime.value.customers = Date.now()
+      const res = await customerApi.getCustomerList({ page: 1 })
+      if (res.flag && res.data) {
+        customers.value = res.data.records || res.data
+        lastFetchTime.value.customers = Date.now()
+      }
       return customers.value
     } finally {
       loading.value.customers = false
@@ -58,9 +54,11 @@ export const useDataStore = defineStore('data', () => {
     }
     loading.value.careLevels = true
     try {
-      const res = await careLevelApi.getCareLevelList()
-      careLevels.value = res.data.list
-      lastFetchTime.value.careLevels = Date.now()
+      const res = await nurseLevelApi.getNurseLevelList({})
+      if (res.flag && res.data) {
+        careLevels.value = res.data
+        lastFetchTime.value.careLevels = Date.now()
+      }
       return careLevels.value
     } finally {
       loading.value.careLevels = false
@@ -73,27 +71,31 @@ export const useDataStore = defineStore('data', () => {
     }
     loading.value.careItems = true
     try {
-      const res = await careItemApi.getCareItemList()
-      careItems.value = res.data.list
-      lastFetchTime.value.careItems = Date.now()
+      const res = await nurseItemApi.getNurseItemList({})
+      if (res.flag && res.data) {
+        careItems.value = res.data.records || res.data
+        lastFetchTime.value.careItems = Date.now()
+      }
       return careItems.value
     } finally {
       loading.value.careItems = false
     }
   }
 
-  async function fetchButlers(force = false) {
-    if (!force && butlers.value.length > 0 && isCacheValid('butlers')) {
-      return butlers.value
+  async function fetchUsers(force = false) {
+    if (!force && users.value.length > 0 && isCacheValid('users')) {
+      return users.value
     }
-    loading.value.butlers = true
+    loading.value.users = true
     try {
-      const res = await healthButlerApi.getButlerList()
-      butlers.value = res.data.list
-      lastFetchTime.value.butlers = Date.now()
-      return butlers.value
+      const res = await userApi.getUserList({})
+      if (res.flag && res.data) {
+        users.value = res.data.records || res.data
+        lastFetchTime.value.users = Date.now()
+      }
+      return users.value
     } finally {
-      loading.value.butlers = false
+      loading.value.users = false
     }
   }
 
@@ -103,9 +105,11 @@ export const useDataStore = defineStore('data', () => {
     }
     loading.value.beds = true
     try {
-      const res = await bedApi.getBedList()
-      beds.value = res.data.list
-      lastFetchTime.value.beds = Date.now()
+      const res = await bedApi.getBedList({})
+      if (res.flag && res.data) {
+        beds.value = res.data
+        lastFetchTime.value.beds = Date.now()
+      }
       return beds.value
     } finally {
       loading.value.beds = false
@@ -114,10 +118,6 @@ export const useDataStore = defineStore('data', () => {
 
   function getCustomerById(id) {
     return customers.value.find(c => c.id === id)
-  }
-
-  function getButlerById(id) {
-    return butlers.value.find(b => b.id === id)
   }
 
   function getCareLevelById(id) {
@@ -142,16 +142,15 @@ export const useDataStore = defineStore('data', () => {
     customers,
     careLevels,
     careItems,
-    butlers,
+    users,
     beds,
     loading,
     fetchCustomers,
     fetchCareLevels,
     fetchCareItems,
-    fetchButlers,
+    fetchUsers,
     fetchBeds,
     getCustomerById,
-    getButlerById,
     getCareLevelById,
     getCareItemById,
     clearCache

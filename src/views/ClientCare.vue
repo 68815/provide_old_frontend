@@ -1,28 +1,29 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useDataStore } from '../stores/data'
-import { customerApi } from '../api'
+import { customerApi, nurseLevelApi } from '../api'
 import { ElMessage } from 'element-plus'
 
-const dataStore = useDataStore()
 const loading = ref(false)
 const customerList = ref([])
+const careLevels = ref([])
 const dialogVisible = ref(false)
 const currentCustomer = ref(null)
 
 const form = ref({
-  careLevel: '',
-  careItems: []
+  levelId: '',
 })
-
-const allCareItems = ['喂饭', '翻身', '擦浴', '如厕护理', '服药管理', '健康监测', '康复训练', '心理疏导']
 
 const fetchData = async () => {
   loading.value = true
   try {
-    const res = await customerApi.getCustomerList({ pageSize: 50 })
-    customerList.value = res.data.list
-    await dataStore.fetchCareLevels()
+    const res = await customerApi.getCustomerList({ page: 1 })
+    if (res.flag && res.data) {
+      customerList.value = res.data.records || res.data
+    }
+    const levelRes = await nurseLevelApi.getNurseLevelList({})
+    if (levelRes.flag && levelRes.data) {
+      careLevels.value = levelRes.data
+    }
   } finally {
     loading.value = false
   }
@@ -31,22 +32,27 @@ const fetchData = async () => {
 const handleConfig = (row) => {
   currentCustomer.value = row
   form.value = {
-    careLevel: row.careLevel || '',
-    careItems: []
+    levelId: row.levelId || '',
   }
   dialogVisible.value = true
 }
 
 const handleSubmit = async () => {
-  await customerApi.updateCustomer({
+  const res = await customerApi.editCustomer({
     id: currentCustomer.value.id,
-    careLevel: form.value.careLevel,
-    careItems: form.value.careItems
+    levelId: form.value.levelId,
   })
-  ElMessage.success('配置成功')
-  dialogVisible.value = false
-  dataStore.clearCache('customers')
-  fetchData()
+  if (res.flag) {
+    ElMessage.success('配置成功')
+    dialogVisible.value = false
+    fetchData()
+  } else {
+    ElMessage.error(res.message || '配置失败')
+  }
+}
+
+const getGenderText = (sex) => {
+  return sex === 0 ? '男' : '女'
 }
 
 onMounted(() => {
@@ -61,22 +67,21 @@ onMounted(() => {
     </div>
 
     <el-table :data="customerList" v-loading="loading" stripe style="width: 100%">
-      <el-table-column prop="name" label="姓名" width="100" />
-      <el-table-column prop="gender" label="性别" width="60" />
-      <el-table-column prop="age" label="年龄" width="70" />
-      <el-table-column prop="bedNo" label="床位号" width="120" />
-      <el-table-column prop="careLevel" label="护理级别" width="120">
+      <el-table-column prop="customerName" label="姓名" width="100" />
+      <el-table-column prop="customerSex" label="性别" width="60">
         <template #default="{ row }">
-          <el-tag size="small" v-if="row.careLevel">{{ row.careLevel }}</el-tag>
+          {{ getGenderText(row.customerSex) }}
+        </template>
+      </el-table-column>
+      <el-table-column prop="customerAge" label="年龄" width="70" />
+      <el-table-column prop="bedNo" label="床位号" width="120" />
+      <el-table-column prop="levelName" label="护理级别" width="120">
+        <template #default="{ row }">
+          <el-tag size="small" v-if="row.levelName">{{ row.levelName }}</el-tag>
           <span v-else class="empty-text">未设置</span>
         </template>
       </el-table-column>
-      <el-table-column prop="status" label="状态" width="80">
-        <template #default="{ row }">
-          <el-tag size="small" :type="row.status === '在住' ? 'success' : 'info'">{{ row.status }}</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="checkInDate" label="入住日期" width="120" />
+      <el-table-column prop="checkinDate" label="入住日期" width="120" />
       <el-table-column label="操作" width="120" fixed="right">
         <template #default="{ row }">
           <el-button type="primary" link size="small" @click="handleConfig(row)">配置护理</el-button>
@@ -90,18 +95,13 @@ onMounted(() => {
 
     <el-dialog v-model="dialogVisible" title="配置客户护理" width="500px">
       <div class="customer-info-dialog">
-        <span>客户：{{ currentCustomer?.name }}</span>
+        <span>客户：{{ currentCustomer?.customerName }}</span>
         <span style="margin-left: 20px">床位：{{ currentCustomer?.bedNo }}</span>
       </div>
       <el-form :model="form" label-width="100px" style="margin-top: 20px">
         <el-form-item label="护理级别">
-          <el-select v-model="form.careLevel" placeholder="请选择护理级别" style="width: 100%">
-            <el-option v-for="level in dataStore.careLevels" :key="level.id" :label="level.name" :value="level.name" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="额外护理项目">
-          <el-select v-model="form.careItems" multiple placeholder="请选择额外护理项目" style="width: 100%">
-            <el-option v-for="item in allCareItems" :key="item" :label="item" :value="item" />
+          <el-select v-model="form.levelId" placeholder="请选择护理级别" style="width: 100%">
+            <el-option v-for="level in careLevels" :key="level.id" :label="level.levelName" :value="level.id" />
           </el-select>
         </el-form-item>
       </el-form>

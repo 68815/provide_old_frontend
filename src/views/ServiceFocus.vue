@@ -1,75 +1,77 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { healthButlerApi, customerApi } from '../api'
+import { customerNurseItemApi, customerApi, nurseItemApi } from '../api'
 import { ElMessage } from 'element-plus'
 
 const loading = ref(false)
 const serviceList = ref([])
 const buyDialogVisible = ref(false)
-const renewDialogVisible = ref(false)
 
 const buyForm = ref({
   customerId: '',
-  serviceName: '',
-  duration: 6
-})
-
-const renewForm = ref({
-  id: null,
-  duration: 6
+  itemId: '',
+  buyTime: '',
+  maturityTime: '',
+  nurseNumber: 1,
 })
 
 const customers = ref([])
-const serviceOptions = ['日常护理', '健康监测', '康复训练', '心理疏导', '特殊护理']
-const durationOptions = [
-  { label: '3个月', value: 3 },
-  { label: '6个月', value: 6 },
-  { label: '12个月', value: 12 }
-]
+const careItems = ref([])
 
 const fetchData = async () => {
   loading.value = true
   try {
-    const res = await healthButlerApi.getCustomerServiceList()
-    serviceList.value = res.data.list
-    const customerRes = await customerApi.getCustomerList({ pageSize: 100, status: '在住' })
-    customers.value = customerRes.data.list
+    const res = await customerNurseItemApi.getCustomerItemList({})
+    if (res.flag && res.data) {
+      serviceList.value = res.data.records || res.data
+    }
+    const customerRes = await customerApi.getCustomerList({ page: 1 })
+    if (customerRes.flag && customerRes.data) {
+      customers.value = customerRes.data.records || customerRes.data
+    }
+    const itemRes = await nurseItemApi.getNurseItemList({})
+    if (itemRes.flag && itemRes.data) {
+      careItems.value = itemRes.data.records || itemRes.data
+    }
   } finally {
     loading.value = false
   }
 }
 
 const handleBuy = () => {
-  buyForm.value = { customerId: '', serviceName: '', duration: 6 }
+  buyForm.value = { customerId: '', itemId: '', buyTime: '', maturityTime: '', nurseNumber: 1 }
   buyDialogVisible.value = true
 }
 
-const handleRenew = (row) => {
-  renewForm.value = { id: row.id, duration: 6 }
-  renewDialogVisible.value = true
-}
-
 const submitBuy = async () => {
-  if (!buyForm.value.customerId || !buyForm.value.serviceName) {
+  if (!buyForm.value.customerId || !buyForm.value.itemId) {
     ElMessage.warning('请填写完整信息')
     return
   }
-  await healthButlerApi.buyService(buyForm.value)
-  ElMessage.success('购买成功')
-  buyDialogVisible.value = false
-  fetchData()
+  const res = await customerNurseItemApi.addItemToCustomer([{
+    custormerId: buyForm.value.customerId,
+    itemId: buyForm.value.itemId,
+    buyTime: buyForm.value.buyTime,
+    maturityTime: buyForm.value.maturityTime,
+    nurseNumber: buyForm.value.nurseNumber,
+  }])
+  if (res.flag) {
+    ElMessage.success('购买成功')
+    buyDialogVisible.value = false
+    fetchData()
+  } else {
+    ElMessage.error(res.message || '购买失败')
+  }
 }
 
-const submitRenew = async () => {
-  await healthButlerApi.renewService(renewForm.value)
-  ElMessage.success('续费成功')
-  renewDialogVisible.value = false
-  fetchData()
+const getStatusText = (status) => {
+  if (!status) return '服务中'
+  return status === 1 ? '已到期' : '服务中'
 }
 
 const getStatusType = (status) => {
-  const map = { '服务中': 'success', '已到期': 'danger', '待续费': 'warning' }
-  return map[status] || 'info'
+  if (!status) return 'success'
+  return status === 1 ? 'danger' : 'success'
 }
 
 onMounted(() => {
@@ -87,28 +89,17 @@ onMounted(() => {
     <el-table :data="serviceList" v-loading="loading" stripe style="width: 100%">
       <el-table-column prop="customerName" label="客户姓名" width="100" />
       <el-table-column prop="bedNo" label="床位号" width="120" />
-      <el-table-column prop="butlerName" label="健康管家" width="120" />
-      <el-table-column prop="serviceName" label="服务名称" width="120">
+      <el-table-column prop="itemName" label="服务名称" width="150">
         <template #default="{ row }">
-          <el-tag size="small">{{ row.serviceName }}</el-tag>
+          <el-tag size="small">{{ row.itemName || row.nursingName }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="startDate" label="开始日期" width="120" />
-      <el-table-column prop="endDate" label="结束日期" width="120" />
+      <el-table-column prop="buyTime" label="购买日期" width="120" />
+      <el-table-column prop="maturityTime" label="到期日期" width="120" />
+      <el-table-column prop="nurseNumber" label="剩余次数" width="100" />
       <el-table-column prop="status" label="状态" width="100">
         <template #default="{ row }">
-          <el-tag :type="getStatusType(row.status)" size="small">{{ row.status }}</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="price" label="服务费用" width="100">
-        <template #default="{ row }">
-          <span style="color: #f56c6c">¥{{ row.price }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="操作" width="120" fixed="right">
-        <template #default="{ row }">
-          <el-button type="primary" link size="small" @click="handleRenew(row)" v-if="row.status !== '服务中'">续费</el-button>
-          <span v-else class="empty-text">-</span>
+          <el-tag :type="getStatusType(row.status)" size="small">{{ getStatusText(row.status) }}</el-tag>
         </template>
       </el-table-column>
     </el-table>
@@ -121,37 +112,27 @@ onMounted(() => {
       <el-form :model="buyForm" label-width="100px">
         <el-form-item label="选择客户">
           <el-select v-model="buyForm.customerId" placeholder="请选择客户" filterable style="width: 100%">
-            <el-option v-for="c in customers" :key="c.id" :label="`${c.name} (${c.bedNo})`" :value="c.id" />
+            <el-option v-for="c in customers" :key="c.id" :label="`${c.customerName} (${c.bedNo})`" :value="c.id" />
           </el-select>
         </el-form-item>
-        <el-form-item label="服务名称">
-          <el-select v-model="buyForm.serviceName" placeholder="请选择服务" style="width: 100%">
-            <el-option v-for="s in serviceOptions" :key="s" :label="s" :value="s" />
+        <el-form-item label="服务项目">
+          <el-select v-model="buyForm.itemId" placeholder="请选择服务" style="width: 100%">
+            <el-option v-for="s in careItems" :key="s.id" :label="s.nursingName" :value="s.id" />
           </el-select>
         </el-form-item>
-        <el-form-item label="服务时长">
-          <el-radio-group v-model="buyForm.duration">
-            <el-radio v-for="d in durationOptions" :key="d.value" :value="d.value">{{ d.label }}</el-radio>
-          </el-radio-group>
+        <el-form-item label="购买日期">
+          <el-date-picker v-model="buyForm.buyTime" type="date" placeholder="选择日期" style="width: 100%" value-format="YYYY-MM-DD" />
+        </el-form-item>
+        <el-form-item label="到期日期">
+          <el-date-picker v-model="buyForm.maturityTime" type="date" placeholder="选择日期" style="width: 100%" value-format="YYYY-MM-DD" />
+        </el-form-item>
+        <el-form-item label="服务次数">
+          <el-input-number v-model="buyForm.nurseNumber" :min="1" style="width: 100%" />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="buyDialogVisible = false">取消</el-button>
         <el-button type="primary" @click="submitBuy">确定购买</el-button>
-      </template>
-    </el-dialog>
-
-    <el-dialog v-model="renewDialogVisible" title="服务续费" width="400px">
-      <el-form :model="renewForm" label-width="100px">
-        <el-form-item label="续费时长">
-          <el-radio-group v-model="renewForm.duration">
-            <el-radio v-for="d in durationOptions" :key="d.value" :value="d.value">{{ d.label }}</el-radio>
-          </el-radio-group>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="renewDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitRenew">确定续费</el-button>
       </template>
     </el-dialog>
   </div>

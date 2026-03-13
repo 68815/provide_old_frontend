@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { outingApi } from '../api'
+import { outwardApi } from '../api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const loading = ref(false)
@@ -9,21 +9,22 @@ const outingList = ref([])
 const fetchData = async () => {
   loading.value = true
   try {
-    const res = await outingApi.getOutingList()
-    outingList.value = res.data.list
+    const res = await outwardApi.getOutwardList({})
+    if (res.flag && res.data) {
+      outingList.value = res.data.records || res.data
+    }
   } finally {
     loading.value = false
   }
 }
 
+const getStatusText = (status) => {
+  const map = { 0: '待审批', 1: '已批准', 2: '已拒绝' }
+  return map[status] || '未知'
+}
+
 const getStatusType = (status) => {
-  const map = {
-    '待审批': 'warning',
-    '已批准': 'success',
-    '已外出': 'primary',
-    '已返回': 'info',
-    '已拒绝': 'danger'
-  }
+  const map = { 0: 'warning', 1: 'success', 2: 'danger' }
   return map[status] || 'info'
 }
 
@@ -33,9 +34,13 @@ const handleApprove = (row) => {
     cancelButtonText: '取消',
     type: 'warning'
   }).then(async () => {
-    await outingApi.approveOuting(row.id, true)
-    ElMessage.success('审批成功')
-    fetchData()
+    const res = await outwardApi.examineOutward(row.id, 1)
+    if (res.flag) {
+      ElMessage.success('审批成功')
+      fetchData()
+    } else {
+      ElMessage.error(res.message || '审批失败')
+    }
   })
 }
 
@@ -45,9 +50,13 @@ const handleReject = (row) => {
     cancelButtonText: '取消',
     type: 'warning'
   }).then(async () => {
-    await outingApi.approveOuting(row.id, false)
-    ElMessage.success('已拒绝')
-    fetchData()
+    const res = await outwardApi.examineOutward(row.id, 2)
+    if (res.flag) {
+      ElMessage.success('已拒绝')
+      fetchData()
+    } else {
+      ElMessage.error(res.message || '操作失败')
+    }
   })
 }
 
@@ -65,28 +74,20 @@ onMounted(() => {
     <el-table :data="outingList" v-loading="loading" stripe style="width: 100%">
       <el-table-column prop="customerName" label="客户姓名" width="100" />
       <el-table-column prop="bedNo" label="床位号" width="120" />
-      <el-table-column prop="outingType" label="外出类型" width="100" />
-      <el-table-column prop="startTime" label="开始时间" width="160" />
-      <el-table-column prop="endTime" label="结束时间" width="160" />
-      <el-table-column prop="reason" label="外出原因" />
-      <el-table-column prop="status" label="状态" width="100">
+      <el-table-column prop="outgoingreason" label="外出原因" />
+      <el-table-column prop="outgoingtime" label="外出时间" width="160" />
+      <el-table-column prop="expectedreturntime" label="预计返回时间" width="160" />
+      <el-table-column prop="escorted" label="陪同人" width="100" />
+      <el-table-column prop="auditstatus" label="状态" width="100">
         <template #default="{ row }">
-          <el-tag :type="getStatusType(row.status)" size="small">{{ row.status }}</el-tag>
+          <el-tag :type="getStatusType(row.auditstatus)" size="small">{{ getStatusText(row.auditstatus) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="applyTime" label="申请时间" width="160" />
-      <el-table-column prop="approver" label="审批人" width="100" />
       <el-table-column label="操作" width="180" fixed="right">
         <template #default="{ row }">
-          <template v-if="row.status === '待审批'">
+          <template v-if="row.auditstatus === 0">
             <el-button type="success" link size="small" @click="handleApprove(row)">批准</el-button>
             <el-button type="danger" link size="small" @click="handleReject(row)">拒绝</el-button>
-          </template>
-          <template v-else-if="row.status === '已批准'">
-            <el-button type="primary" link size="small">确认外出</el-button>
-          </template>
-          <template v-else-if="row.status === '已外出'">
-            <el-button type="primary" link size="small">确认返回</el-button>
           </template>
           <span v-else class="empty-text">-</span>
         </template>

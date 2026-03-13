@@ -1,66 +1,63 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, onMounted } from 'vue'
+import { roomApi } from '../api'
+import { ElMessage } from 'element-plus'
 
+const loading = ref(false)
 const currentFloor = ref('一层')
-const floorOptions = [
-  { label: '一层', value: '一层' },
-  { label: '二层', value: '二层' },
-  { label: '三层', value: '三层' },
-]
+const bedData = ref(null)
 
-// 床位状态统计（示例数据）
+const floorOptions = ['一层', '二层', '三层']
+
 const stats = ref({
-  total: 50,
-  free: 20,
-  occupied: 20,
-  outing: 10,
+  total: 0,
+  kx: 0,
+  yr: 0,
+  wc: 0
 })
 
-// 床位状态：free 空闲(红) | occupied 有人(蓝) | outing 外出(蓝床+人)
-const bedStatusList = [
-  { room: '1001-1', status: 'free' },
-  { room: '1001-2', status: 'occupied' },
-  { room: '1002', status: 'free' },
-  { room: '1003', status: 'occupied' },
-  { room: '1004', status: 'outing' },
-  { room: '1005', status: 'free' },
-]
-
-// 网格：行头 1001(下分1001-1,1001-2)、1005；列头 1002,1003,1004；公共区域 电梯厅、洗衣房、活动中心
-const rowLabels = [
-  { id: '1001', sub: ['1001-1', '1001-2'] },
-  { id: '1005' },
-]
-const colLabels = ['1002', '1003', '1004']
-const commonAreas = [
-  { name: '电梯厅', color: '#5cadad', span: 3 },
-  { name: '洗衣房', color: '#2d6a4f', span: 3 },
-  { name: '活动中心', color: '#74c69d', span: 3 },
-]
-
-function getBedStatus(roomOrBed) {
-  const item = bedStatusList.find((b) => b.room === roomOrBed)
-  return item ? item.status : 'free'
+const fetchData = async () => {
+  loading.value = true
+  try {
+    const res = await roomApi.getCwsyBedVo(currentFloor.value)
+    if (res.flag && res.data) {
+      bedData.value = res.data
+      stats.value = {
+        total: res.data.zcw || 0,
+        kx: res.data.kx || 0,
+        yr: res.data.yr || 1,
+        wc: res.data.wc || 1
+      }
+    }
+  } finally {
+    loading.value = false
+  }
 }
+
+const getBedStatusText = (status) => {
+  const map = { 1: '空闲', 2: '有人', 3: '外出' }
+  return map[status] || '未知'
+}
+
+const getBedStatusClass = (status) => {
+  if (status === 1) return 'status-free'
+  if (status === 2) return 'status-occupied'
+  if (status === 3) return 'status-outing'
+  return ''
+}
+
+onMounted(() => {
+  fetchData()
+})
 </script>
 
 <template>
   <div class="bed-layout-page">
-    <!-- 顶部筛选与统计 -->
     <div class="filter-bar">
       <div class="filter-left">
         <span class="label">楼层：</span>
-        <el-select
-          v-model="currentFloor"
-          placeholder="请选择楼层"
-          style="width: 140px"
-        >
-          <el-option
-            v-for="opt in floorOptions"
-            :key="opt.value"
-            :label="opt.label"
-            :value="opt.value"
-          />
+        <el-select v-model="currentFloor" placeholder="请选择楼层" style="width: 140px" @change="fetchData">
+          <el-option v-for="floor in floorOptions" :key="floor" :label="floor" :value="floor" />
         </el-select>
       </div>
       <div class="stats-bar">
@@ -70,61 +67,36 @@ function getBedStatus(roomOrBed) {
         </div>
         <div class="stat-item">
           <span class="stat-icon free">🛏</span>
-          <span>空闲: {{ stats.free }}</span>
+          <span>空闲: {{ stats.kx }}</span>
         </div>
         <div class="stat-item">
           <span class="stat-icon occupied">👤</span>
-          <span>有人: {{ stats.occupied }}</span>
+          <span>有人: {{ stats.yr }}</span>
         </div>
         <div class="stat-item">
-          <span class="stat-icon outing">🛏👤</span>
-          <span>外出: {{ stats.outing }}</span>
+          <span class="stat-icon outing">🚶</span>
+          <span>外出: {{ stats.wc }}</span>
         </div>
       </div>
     </div>
 
-    <!-- 床位布局网格 -->
-    <div class="bed-grid-wrap">
-      <table class="bed-table">
-        <thead>
-          <tr>
-            <th class="corner" />
-            <th v-for="col in colLabels" :key="col" class="col-header">{{ col }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="area in commonAreas" :key="area.name">
-            <td class="row-header">{{ area.name }}</td>
-            <td
-              :colspan="area.span"
-              class="area-cell"
-              :style="{ background: area.color }"
+    <div class="bed-grid-wrap" v-loading="loading">
+      <div class="room-grid">
+        <div v-for="room in bedData?.roomList || []" :key="room.id" class="room-card">
+          <div class="room-header">房间 {{ room.roomNo }}</div>
+          <div class="bed-list">
+            <div 
+              v-for="bed in room.bedList || []" 
+              :key="bed.id" 
+              class="bed-item"
+              :class="getBedStatusClass(bed.bedStatus)"
             >
-              {{ area.name }}
-            </td>
-          </tr>
-          <template v-for="row in rowLabels" :key="row.id">
-            <template v-if="row.sub">
-              <tr v-for="sub in row.sub" :key="sub">
-                <td class="row-header">
-                  <span class="bed-dot" :class="getBedStatus(sub)" />
-                  {{ sub }}
-                </td>
-                <td v-for="col in colLabels" :key="col" class="bed-cell">
-                  <span class="bed-dot free" />
-                  <span class="bed-num">床位</span>
-                </td>
-              </tr>
-            </template>
-            <tr v-else>
-              <td class="row-header">{{ row.id }}</td>
-              <td v-for="col in colLabels" :key="col" class="bed-cell">
-                <span class="bed-num">房间号</span>
-              </td>
-            </tr>
-          </template>
-        </tbody>
-      </table>
+              <div class="bed-no">{{ bed.bedNo }}</div>
+              <div class="bed-status">{{ getBedStatusText(bed.bedStatus) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -169,73 +141,69 @@ function getBedStatus(roomOrBed) {
 .stat-icon {
   font-size: 16px;
 }
-.stat-icon.total { filter: none; }
-.stat-icon.free { filter: hue-rotate(-60deg); }
-.stat-icon.occupied { color: #409eff; }
-.stat-icon.outing { color: #409eff; }
-.bed-grid-wrap {
-  overflow-x: auto;
+.room-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px));
+  gap: 16px;
 }
-.bed-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 520px;
-  background: #fff;
-}
-.bed-table th,
-.bed-table td {
+.room-card {
+  background: #f5f7fa;
+  border-radius: 8px;
+  padding: 12px;
   border: 1px solid #e4e7ed;
-  padding: 10px 12px;
-  font-size: 13px;
-  text-align: center;
-  vertical-align: middle;
 }
-.corner {
-  width: 100px;
-  background: #f5f7fa;
-}
-.col-header,
-.row-header {
-  background: #f5f7fa;
+.room-header {
+  font-size: 14px;
   font-weight: 500;
   color: #303133;
-}
-.row-header {
-  width: 100px;
+  margin-bottom: 12px;
   text-align: center;
 }
-.row-header .bed-dot {
-  margin-right: 6px;
-  vertical-align: middle;
+.bed-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
-.bed-dot {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  border-radius: 2px;
+.bed-item {
+  flex: 1;
+  min-width: 60px;
+  padding: 16px 8px;
+  border-radius: 6px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
 }
-.bed-dot.free {
-  background: #f56c6c;
+.bed-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
-.bed-dot.occupied {
-  background: #409eff;
-}
-.bed-dot.outing {
-  background: linear-gradient(135deg, #409eff 50%, #79bbff 50%);
-}
-.area-cell {
-  color: #fff;
+.bed-no {
+  font-size: 13px;
   font-weight: 500;
+  margin-bottom: 4px;
 }
-.bed-cell {
-  min-width: 100px;
-}
-.bed-cell .bed-dot {
-  display: block;
-  margin: 0 auto 4px;
-}
-.bed-num {
+.bed-status {
   font-size: 12px;
-  color: #909399;
+}
+.status-free {
+  background: #f0f9eb;
+  border: 2px solid #67c23a;
+}
+.status-free .bed-status {
+  color: #67c23a;
+}
+.status-occupied {
+  background: #ecf5ff;
+  border: 2px solid #409eff;
+}
+.status-occupied .bed-status {
+  color: #409eff;
+}
+.status-outing {
+  background: #fdf6ec;
+  border: 2px solid #e6a23c;
+}
+.status-outing .bed-status {
+  color: #e6a23c;
 }
 </style>

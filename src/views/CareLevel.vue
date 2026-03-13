@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { careLevelApi } from '../api'
+import { nurseLevelApi } from '../api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const loading = ref(false)
@@ -12,24 +12,20 @@ const formRef = ref(null)
 const form = ref({
   id: null,
   name: '',
-  description: '',
-  price: '',
-  items: []
+  status: 1,
 })
 
 const rules = {
   name: [{ required: true, message: '请输入级别名称', trigger: 'blur' }],
-  description: [{ required: true, message: '请输入描述', trigger: 'blur' }],
-  price: [{ required: true, message: '请输入价格', trigger: 'blur' }]
 }
-
-const allCareItems = ['喂饭', '翻身', '擦浴', '如厕护理', '服药管理', '健康监测', '康复训练', '心理疏导', '协助进食', '协助洗漱', '服药提醒', '日常活动协助', '日常活动指导']
 
 const fetchData = async () => {
   loading.value = true
   try {
-    const res = await careLevelApi.getCareLevelList()
-    levelList.value = res.data.list
+    const res = await nurseLevelApi.getNurseLevelList({})
+    if (res.flag && res.data) {
+      levelList.value = res.data
+    }
   } finally {
     loading.value = false
   }
@@ -37,13 +33,13 @@ const fetchData = async () => {
 
 const handleAdd = () => {
   dialogTitle.value = '添加护理级别'
-  form.value = { id: null, name: '', description: '', price: '', items: [] }
+  form.value = { id: null, name: '', status: 1 }
   dialogVisible.value = true
 }
 
 const handleEdit = (row) => {
   dialogTitle.value = '编辑护理级别'
-  form.value = { ...row }
+  form.value = { id: row.id, name: row.levelName, status: row.levelStatus }
   dialogVisible.value = true
 }
 
@@ -53,9 +49,13 @@ const handleDelete = (row) => {
     cancelButtonText: '取消',
     type: 'warning'
   }).then(async () => {
-    await careLevelApi.deleteCareLevel(row.id)
-    ElMessage.success('删除成功')
-    fetchData()
+    const res = await nurseLevelApi.removeNurseLevel(row.id)
+    if (res.flag) {
+      ElMessage.success('删除成功')
+      fetchData()
+    } else {
+      ElMessage.error(res.message || '删除失败')
+    }
   })
 }
 
@@ -63,15 +63,27 @@ const handleSubmit = async () => {
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
   
+  let res
   if (form.value.id) {
-    await careLevelApi.updateCareLevel(form.value)
-    ElMessage.success('修改成功')
+    res = await nurseLevelApi.updateNurseLevel({
+      id: form.value.id,
+      name: form.value.name,
+      status: form.value.status,
+    })
   } else {
-    await careLevelApi.addCareLevel(form.value)
-    ElMessage.success('添加成功')
+    res = await nurseLevelApi.addNurseLevel({
+      name: form.value.name,
+      status: form.value.status,
+    })
   }
-  dialogVisible.value = false
-  fetchData()
+  
+  if (res.flag) {
+    ElMessage.success(form.value.id ? '修改成功' : '添加成功')
+    dialogVisible.value = false
+    fetchData()
+  } else {
+    ElMessage.error(res.message || '操作失败')
+  }
 }
 
 onMounted(() => {
@@ -87,16 +99,12 @@ onMounted(() => {
     </div>
 
     <el-table :data="levelList" v-loading="loading" stripe style="width: 100%">
-      <el-table-column prop="name" label="级别名称" width="150" />
-      <el-table-column prop="description" label="描述" />
-      <el-table-column prop="price" label="价格(元/月)" width="120">
+      <el-table-column prop="levelName" label="级别名称" width="200" />
+      <el-table-column prop="levelStatus" label="状态" width="120">
         <template #default="{ row }">
-          <span style="color: #f56c6c; font-weight: 500">¥{{ row.price }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="包含项目" width="300">
-        <template #default="{ row }">
-          <el-tag v-for="item in row.items" :key="item" size="small" style="margin-right: 4px; margin-bottom: 4px">{{ item }}</el-tag>
+          <el-tag :type="row.levelStatus === 1 ? 'success' : 'info'" size="small">
+            {{ row.levelStatus === 1 ? '启用' : '禁用' }}
+          </el-tag>
         </template>
       </el-table-column>
       <el-table-column label="操作" width="180" fixed="right">
@@ -112,16 +120,11 @@ onMounted(() => {
         <el-form-item label="级别名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入级别名称" />
         </el-form-item>
-        <el-form-item label="描述" prop="description">
-          <el-input v-model="form.description" type="textarea" :rows="2" placeholder="请输入描述" />
-        </el-form-item>
-        <el-form-item label="价格" prop="price">
-          <el-input-number v-model="form.price" :min="0" style="width: 100%" placeholder="请输入价格" />
-        </el-form-item>
-        <el-form-item label="包含项目">
-          <el-select v-model="form.items" multiple placeholder="请选择护理项目" style="width: 100%">
-            <el-option v-for="item in allCareItems" :key="item" :label="item" :value="item" />
-          </el-select>
+        <el-form-item label="状态">
+          <el-radio-group v-model="form.status">
+            <el-radio :value="1">启用</el-radio>
+            <el-radio :value="0">禁用</el-radio>
+          </el-radio-group>
         </el-form-item>
       </el-form>
       <template #footer>

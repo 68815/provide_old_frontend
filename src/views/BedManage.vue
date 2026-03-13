@@ -1,9 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { useDataStore } from '../stores/data'
 import { bedApi } from '../api'
 
-const dataStore = useDataStore()
 const loading = ref(false)
 const bedList = ref([])
 const currentFloor = ref('')
@@ -12,23 +10,23 @@ const keyword = ref('')
 
 const floorOptions = [
   { label: '全部楼层', value: '' },
-  { label: '1层', value: '1层' },
-  { label: '2层', value: '2层' },
-  { label: '3层', value: '3层' },
+  { label: '一层', value: '一层' },
+  { label: '二层', value: '二层' },
+  { label: '三层', value: '三层' },
 ]
 
 const statusOptions = [
   { label: '全部状态', value: '' },
-  { label: '空闲', value: '空闲' },
-  { label: '占用', value: '占用' },
-  { label: '外出', value: '外出' },
+  { label: '空闲', value: '1' },
+  { label: '占用', value: '2' },
+  { label: '外出', value: '3' },
 ]
 
 const stats = computed(() => {
   const total = bedList.value.length
-  const free = bedList.value.filter(b => b.status === '空闲').length
-  const occupied = bedList.value.filter(b => b.status === '占用').length
-  const outing = bedList.value.filter(b => b.status === '外出').length
+  const free = bedList.value.filter(b => b.bedStatus === 1).length
+  const occupied = bedList.value.filter(b => b.bedStatus === 2).length
+  const outing = bedList.value.filter(b => b.bedStatus === 3).length
   return { total, free, occupied, outing }
 })
 
@@ -36,18 +34,24 @@ const fetchData = async () => {
   loading.value = true
   try {
     const res = await bedApi.getBedList({
-      floor: currentFloor.value,
-      status: currentStatus.value,
-      keyword: keyword.value
+      bedNo: keyword.value,
+      bedStatus: currentStatus.value,
     })
-    bedList.value = res.data.list
+    if (res.flag && res.data) {
+      bedList.value = res.data
+    }
   } finally {
     loading.value = false
   }
 }
 
+const getStatusText = (status) => {
+  const map = { 1: '空闲', 2: '占用', 3: '外出' }
+  return map[status] || '未知'
+}
+
 const getStatusType = (status) => {
-  const map = { '空闲': 'success', '占用': 'primary', '外出': 'warning' }
+  const map = { 1: 'success', 2: 'primary', 3: 'warning' }
   return map[status] || 'info'
 }
 
@@ -70,7 +74,7 @@ onMounted(() => {
         </el-select>
         <el-input
           v-model="keyword"
-          placeholder="搜索床位号/客户姓名"
+          placeholder="搜索床位号"
           style="width: 200px; margin-left: 16px"
           clearable
           @keyup.enter="fetchData"
@@ -99,32 +103,24 @@ onMounted(() => {
 
     <el-table :data="bedList" v-loading="loading" stripe style="width: 100%">
       <el-table-column prop="bedNo" label="床位号" width="120" />
-      <el-table-column prop="room" label="房间号" width="100" />
-      <el-table-column prop="floor" label="楼层" width="80" />
-      <el-table-column prop="status" label="状态" width="100">
+      <el-table-column prop="roomNo" label="房间号" width="100" />
+      <el-table-column prop="bedStatus" label="状态" width="100">
         <template #default="{ row }">
-          <el-tag :type="getStatusType(row.status)" size="small">{{ row.status }}</el-tag>
+          <el-tag :type="getStatusType(row.bedStatus)" size="small">{{ getStatusText(row.bedStatus) }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column label="客户信息">
         <template #default="{ row }">
           <template v-if="row.customer">
             <div class="customer-info">
-              <span>{{ row.customer.name }}</span>
+              <span>{{ row.customer.customerName }}</span>
               <span class="info-divider">|</span>
-              <span>{{ row.customer.gender }}</span>
+              <span>{{ row.customer.customerSex === 0 ? '男' : '女' }}</span>
               <span class="info-divider">|</span>
-              <span>{{ row.customer.age }}岁</span>
-              <span class="info-divider">|</span>
-              <span>{{ row.customer.careLevel }}</span>
+              <span>{{ row.customer.customerAge }}岁</span>
             </div>
           </template>
           <span v-else class="empty-text">-</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="入住日期" width="120">
-        <template #default="{ row }">
-          {{ row.customer?.checkInDate || '-' }}
         </template>
       </el-table-column>
       <el-table-column label="操作" width="150" fixed="right">

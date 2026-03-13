@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { careItemApi } from '../api'
+import { nurseItemApi } from '../api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const loading = ref(false)
@@ -13,25 +13,25 @@ const form = ref({
   id: null,
   name: '',
   description: '',
-  category: '',
   price: '',
-  unit: ''
+  serialNumber: '',
+  executionCycle: '',
+  executionTimes: '',
+  status: 1,
 })
 
 const rules = {
   name: [{ required: true, message: '请输入项目名称', trigger: 'blur' }],
-  category: [{ required: true, message: '请选择分类', trigger: 'change' }],
   price: [{ required: true, message: '请输入价格', trigger: 'blur' }],
-  unit: [{ required: true, message: '请输入单位', trigger: 'blur' }]
 }
-
-const categoryOptions = ['日常护理', '个人卫生', '医疗护理', '康复护理', '心理护理']
 
 const fetchData = async () => {
   loading.value = true
   try {
-    const res = await careItemApi.getCareItemList()
-    itemList.value = res.data.list
+    const res = await nurseItemApi.getNurseItemList({})
+    if (res.flag && res.data) {
+      itemList.value = res.data.records || res.data
+    }
   } finally {
     loading.value = false
   }
@@ -39,13 +39,22 @@ const fetchData = async () => {
 
 const handleAdd = () => {
   dialogTitle.value = '添加护理项目'
-  form.value = { id: null, name: '', description: '', category: '', price: '', unit: '' }
+  form.value = { id: null, name: '', description: '', price: '', serialNumber: '', executionCycle: '', executionTimes: '', status: 1 }
   dialogVisible.value = true
 }
 
 const handleEdit = (row) => {
   dialogTitle.value = '编辑护理项目'
-  form.value = { ...row }
+  form.value = {
+    id: row.id,
+    name: row.nursingName,
+    description: row.message,
+    price: row.servicePrice,
+    serialNumber: row.serialNumber,
+    executionCycle: row.executionCycle,
+    executionTimes: row.executionTimes,
+    status: row.status,
+  }
   dialogVisible.value = true
 }
 
@@ -55,9 +64,13 @@ const handleDelete = (row) => {
     cancelButtonText: '取消',
     type: 'warning'
   }).then(async () => {
-    await careItemApi.deleteCareItem(row.id)
-    ElMessage.success('删除成功')
-    fetchData()
+    const res = await nurseItemApi.delNurseItem(row.id)
+    if (res.flag) {
+      ElMessage.success('删除成功')
+      fetchData()
+    } else {
+      ElMessage.error(res.message || '删除失败')
+    }
   })
 }
 
@@ -65,15 +78,37 @@ const handleSubmit = async () => {
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
   
+  let res
   if (form.value.id) {
-    await careItemApi.updateCareItem(form.value)
-    ElMessage.success('修改成功')
+    res = await nurseItemApi.updateNurseItem({
+      id: form.value.id,
+      name: form.value.name,
+      description: form.value.description,
+      price: form.value.price,
+      serialNumber: form.value.serialNumber,
+      executionCycle: form.value.executionCycle,
+      executionTimes: form.value.executionTimes,
+      status: form.value.status,
+    })
   } else {
-    await careItemApi.addCareItem(form.value)
-    ElMessage.success('添加成功')
+    res = await nurseItemApi.addNurseItem({
+      name: form.value.name,
+      description: form.value.description,
+      price: form.value.price,
+      serialNumber: form.value.serialNumber,
+      executionCycle: form.value.executionCycle,
+      executionTimes: form.value.executionTimes,
+      status: form.value.status,
+    })
   }
-  dialogVisible.value = false
-  fetchData()
+  
+  if (res.flag) {
+    ElMessage.success(form.value.id ? '修改成功' : '添加成功')
+    dialogVisible.value = false
+    fetchData()
+  } else {
+    ElMessage.error(res.message || '操作失败')
+  }
 }
 
 onMounted(() => {
@@ -89,19 +124,22 @@ onMounted(() => {
     </div>
 
     <el-table :data="itemList" v-loading="loading" stripe style="width: 100%">
-      <el-table-column prop="name" label="项目名称" width="150" />
-      <el-table-column prop="description" label="描述" />
-      <el-table-column prop="category" label="分类" width="120">
+      <el-table-column prop="nursingName" label="项目名称" width="150" />
+      <el-table-column prop="message" label="描述" />
+      <el-table-column prop="servicePrice" label="价格(元)" width="100">
         <template #default="{ row }">
-          <el-tag size="small">{{ row.category }}</el-tag>
+          <span style="color: #f56c6c">¥{{ row.servicePrice }}</span>
         </template>
       </el-table-column>
-      <el-table-column prop="price" label="价格(元)" width="100">
+      <el-table-column prop="executionCycle" label="执行周期" width="100" />
+      <el-table-column prop="executionTimes" label="执行次数" width="100" />
+      <el-table-column prop="status" label="状态" width="100">
         <template #default="{ row }">
-          <span style="color: #f56c6c">¥{{ row.price }}</span>
+          <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
+            {{ row.status === 1 ? '启用' : '禁用' }}
+          </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="unit" label="单位" width="80" />
       <el-table-column label="操作" width="180" fixed="right">
         <template #default="{ row }">
           <el-button type="primary" link size="small" @click="handleEdit(row)">编辑</el-button>
@@ -118,16 +156,20 @@ onMounted(() => {
         <el-form-item label="描述">
           <el-input v-model="form.description" type="textarea" :rows="2" placeholder="请输入描述" />
         </el-form-item>
-        <el-form-item label="分类" prop="category">
-          <el-select v-model="form.category" placeholder="请选择分类" style="width: 100%">
-            <el-option v-for="cat in categoryOptions" :key="cat" :label="cat" :value="cat" />
-          </el-select>
-        </el-form-item>
         <el-form-item label="价格" prop="price">
           <el-input-number v-model="form.price" :min="0" style="width: 100%" />
         </el-form-item>
-        <el-form-item label="单位" prop="unit">
-          <el-input v-model="form.unit" placeholder="如：次、小时、天" />
+        <el-form-item label="执行周期">
+          <el-input v-model="form.executionCycle" placeholder="如：每天、每周" />
+        </el-form-item>
+        <el-form-item label="执行次数">
+          <el-input-number v-model="form.executionTimes" :min="1" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-radio-group v-model="form.status">
+            <el-radio :value="1">启用</el-radio>
+            <el-radio :value="0">禁用</el-radio>
+          </el-radio-group>
         </el-form-item>
       </el-form>
       <template #footer>
