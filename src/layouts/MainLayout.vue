@@ -9,6 +9,7 @@ const route = useRoute()
 const tabMap = {
   '/bed-layout': '床位示意图',
   '/bed-manage': '床位管理',
+  '/customer-list': '客户信息',
   '/admission': '入住登记',
   '/care-record': '护理记录',
   '/outing': '外出登记',
@@ -18,6 +19,7 @@ const tabMap = {
   '/client-care': '客户护理设置',
   '/service-target': '设置服务对象',
   '/service-focus': '服务关注',
+  '/user-manage': '用户管理',
   '/basic-data': '基础数据维护',
 }
 
@@ -69,6 +71,7 @@ const menuItems = [
   {
     title: '客户管理',
     children: [
+      { path: '/customer-list', title: '客户信息' },
       { path: '/admission', title: '入住登记' },
       { path: '/outing', title: '外出登记' },
       { path: '/discharge', title: '退住登记' },
@@ -91,8 +94,9 @@ const menuItems = [
     ],
   },
   {
-    title: '用户管理',
+    title: '系统管理',
     children: [
+      { path: '/user-manage', title: '用户管理' },
       { path: '/basic-data', title: '基础数据维护' },
     ],
   },
