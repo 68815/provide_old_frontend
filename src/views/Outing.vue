@@ -61,7 +61,7 @@ const handleApprove = (row) => {
     } else {
       ElMessage.error(res.message || '审批失败')
     }
-  })
+  }).catch(() => {})
 }
 
 const handleReject = (row) => {
@@ -77,7 +77,23 @@ const handleReject = (row) => {
     } else {
       ElMessage.error(res.message || '操作失败')
     }
-  })
+  }).catch(() => {})
+}
+
+const handleCancel = (row) => {
+  ElMessageBox.confirm('确定撤回该外出申请吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(async () => {
+    const res = await outwardApi.delOutward(row.id, 0)
+    if (res.flag) {
+      ElMessage.success('已撤回')
+      fetchData()
+    } else {
+      ElMessage.error(res.message || '操作失败')
+    }
+  }).catch(() => {})
 }
 
 onMounted(() => {
@@ -103,11 +119,14 @@ onMounted(() => {
           <el-tag :type="getStatusType(row.auditstatus)" size="small">{{ getStatusText(row.auditstatus) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" min-width="120">
+      <el-table-column label="操作" min-width="150">
         <template #default="{ row }">
           <template v-if="row.auditstatus === 0">
             <el-button type="success" link size="small" @click="handleApprove(row)">批准</el-button>
             <el-button type="danger" link size="small" @click="handleReject(row)">拒绝</el-button>
+          </template>
+          <template v-else-if="row.auditstatus >= 1">
+            <el-button type="warning" link size="small" @click="handleCancel(row)">撤回</el-button>
           </template>
           <span v-else class="empty-text">-</span>
         </template>

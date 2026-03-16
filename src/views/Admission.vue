@@ -18,25 +18,32 @@ const form = reactive({
   bedId: '',
   levelId: '',
   checkInDate: '',
-  emergencyContact: '',
+  familyMember: '',
   birthday: '',
   bloodType: '',
   height: '',
   weight: '',
   healthCondition: '',
   allergies: '',
+  buildingNo: '',
+  roomNo: '',
+  expirationDate: '',
+  userId: '',
 })
 
 const rules = {
   name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
   gender: [{ required: true, message: '请选择性别', trigger: 'change' }],
   age: [{ required: true, message: '请输入年龄', trigger: 'blur' }],
+  bloodType: [{ required: true, message: '请输入血型', trigger: 'blur' }],
   idCard: [{ required: true, message: '请输入身份证号', trigger: 'blur' }],
   phone: [{ required: true, message: '请输入联系电话', trigger: 'blur' }],
   bedId: [{ required: true, message: '请选择床位', trigger: 'change' }],
-  levelId: [{ required: true, message: '请选择护理级别', trigger: 'change' }],
   checkInDate: [{ required: true, message: '请选择入住日期', trigger: 'change' }],
-  emergencyContact: [{ required: true, message: '请输入紧急联系人', trigger: 'blur' }],
+  familyMember: [{ required: true, message: '请输入家属姓名', trigger: 'blur' }],
+  roomNo: [{ required: true, message: '请输入房间号', trigger: 'blur' }],
+  buildingNo: [{ required: true, message: '请输入所属楼房', trigger: 'blur' }],
+  expirationDate: [{ required: true, message: '请选择合同到期时间', trigger: 'change' }],
 }
 
 const formRef = ref(null)
@@ -71,13 +78,17 @@ const handleSubmit = async () => {
       bedId: form.bedId,
       levelId: form.levelId,
       checkInDate: form.checkInDate,
-      emergencyContact: form.emergencyContact,
+      familyMember: form.familyMember,
       birthday: form.birthday,
       bloodType: form.bloodType,
       height: form.height,
       weight: form.weight,
       healthCondition: form.healthCondition,
       allergies: form.allergies,
+      buildingNo: form.buildingNo,
+      roomNo: form.roomNo,
+      expirationDate: form.expirationDate,
+      userId: form.userId,
     })
     if (res.flag) {
       ElMessage.success('入住登记成功')
@@ -151,6 +162,17 @@ onMounted(() => {
             <el-date-picker v-model="form.birthday" type="date" placeholder="选择日期" style="width: 100%" value-format="YYYY-MM-DD" />
           </el-form-item>
         </el-col>
+      </el-row> <el-row :gutter="20">
+        <el-col :span="12">
+          <el-form-item label="血型" prop="bloodType">
+            <el-input v-model="form.bloodType" placeholder="请输入血型" />
+          </el-form-item>
+        </el-col>
+        <el-col :span="12">
+          <el-form-item label="家属">
+            <el-input v-model="form.familyMember" placeholder="请输入家属姓名" />
+          </el-form-item>
+        </el-col>
       </el-row>
 
       <el-divider content-position="left">入住信息</el-divider>
@@ -176,13 +198,30 @@ onMounted(() => {
             <el-date-picker v-model="form.checkInDate" type="date" placeholder="选择日期" style="width: 100%" value-format="YYYY-MM-DD" />
           </el-form-item>
         </el-col>
+        <el-col :span="12">
+          <el-form-item label="合同到期时间" prop="expirationDate">
+            <el-date-picker v-model="form.expirationDate" type="date" placeholder="选择日期" style="width: 100%" value-format="YYYY-MM-DD" />
+          </el-form-item>
+        </el-col>
       </el-row>
-
-      <el-divider content-position="left">紧急联系人</el-divider>
       <el-row :gutter="20">
         <el-col :span="12">
-          <el-form-item label="紧急联系人" prop="emergencyContact">
-            <el-input v-model="form.emergencyContact" placeholder="请输入紧急联系人" />
+          <el-form-item label="所属楼房" prop="buildingNo">
+            <el-input v-model="form.buildingNo" placeholder="请输入所属楼房" />
+          </el-form-item>
+        </el-col>
+        <el-col :span="12">
+          <el-form-item label="房间号" prop="roomNo">
+            <el-input v-model="form.roomNo" placeholder="请输入房间号" />
+          </el-form-item>
+        </el-col>
+      </el-row>
+
+      <el-divider content-position="left">家属信息</el-divider>
+      <el-row :gutter="20">
+        <el-col :span="12">
+          <el-form-item label="家属" prop="familyMember">
+            <el-input v-model="form.familyMember" placeholder="请输入家属姓名" />
           </el-form-item>
         </el-col>
       </el-row>
@@ -203,8 +242,8 @@ onMounted(() => {
       <el-form-item label="健康状况">
         <el-input v-model="form.healthCondition" type="textarea" :rows="2" placeholder="请输入健康状况" />
       </el-form-item>
-      <el-form-item label="过敏史">
-        <el-input v-model="form.allergies" placeholder="请输入过敏史" />
+      <el-form-item label="注意事项">
+        <el-input v-model="form.allergies" placeholder="请输入注意事项" />
       </el-form-item>
 
       <el-form-item>

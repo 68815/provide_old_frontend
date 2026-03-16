@@ -1,4 +1,4 @@
-import { get, post } from './request'
+import { get, post, postJson } from './request'
 
 export const customerApi = {
   getCustomerList: (params) => {
@@ -11,7 +11,7 @@ export const customerApi = {
   },
 
   addCustomer: (data) => {
-    return post('/customer/rzdj', {
+    return postJson('/customer/rzdj', {
       customerName: data.name,
       customerSex: data.gender === '男' ? 0 : 1,
       customerAge: data.age,
@@ -20,7 +20,7 @@ export const customerApi = {
       bedId: data.bedId,
       levelId: data.levelId,
       checkinDate: data.checkInDate,
-      familyMember: data.emergencyContact,
+      familyMember: data.familyMember,
       birthday: data.birthday,
       bloodType: data.bloodType,
       height: data.height,
@@ -35,7 +35,7 @@ export const customerApi = {
   },
 
   editCustomer: (data) => {
-    return post('/customer/editKhxx', {
+    return postJson('/customer/editKhxx', {
       id: data.id,
       customerName: data.name,
       customerSex: data.gender === '男' ? 0 : 1,
@@ -44,7 +44,7 @@ export const customerApi = {
       contactTel: data.phone,
       bedId: data.bedId,
       levelId: data.levelId,
-      familyMember: data.emergencyContact,
+      familyMember: data.familyMember,
       birthday: data.birthday,
       bloodType: data.bloodType,
       height: data.height,
@@ -83,11 +83,11 @@ export const outwardApi = {
   },
 
   examineOutward: (id, auditstatus) => {
-    return post('/outward/examineOutward', { id, auditstatus })
+    return postJson('/outward/examineOutward', { id, auditstatus })
   },
 
   delOutward: (id, isDeleted = 1) => {
-    return post('/outward/delOutward', { id, is_deleted: isDeleted })
+    return postJson('/outward/delOutward', { id, isDeleted })
   },
 }
 
@@ -100,7 +100,7 @@ export const backdownApi = {
   },
 
   addBackdown: (data) => {
-    return post('/backdown/addBackdown', {
+    return postJson('/backdown/addBackdown', {
       customer_id: data.customerId,
       retreattime: data.retreatTime,
       retreattype: data.retreatType,
@@ -109,10 +109,10 @@ export const backdownApi = {
   },
 
   examineBackdown: (id, auditstatus) => {
-    return post('/backdown/examineBackdown', { id, auditstatus })
+    return postJson('/backdown/examineBackdown', { id, auditstatus })
   },
 
   delBackdown: (id, isDeleted = 1) => {
-    return post('/backdown/delBackdown', { id, is_deleted: isDeleted })
+    return postJson('/backdown/delBackdown', { id, is_deleted: isDeleted })
   },
 }
