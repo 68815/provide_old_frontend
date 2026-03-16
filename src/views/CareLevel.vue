@@ -74,27 +74,12 @@ const handleConfig = async (row) => {
   selectedItems.value = []
   
   try {
-    const [allItemsRes, selectedItemsRes] = await Promise.all([
-      nurseItemApi.getNurseItemList({}),
-      nurseLevelApi.getNurseItemsByLevel(row.id)
-    ])
+    const res = await nurseLevelApi.getNurseItemsByLevel(row.id)
     
-    if (allItemsRes.flag && allItemsRes.data) {
-      nurseItems.value = allItemsRes.data.records || allItemsRes.data || []
+    if (res.flag && res.data) {
+      nurseItems.value = res.data.records || res.data || []
     }
-    
-    if (selectedItemsRes.flag && selectedItemsRes.data) {
-      selectedItems.value = selectedItemsRes.data.map(item => item.id)
-    }
-    
-    await nextTick()
-    if (configTableRef.value) {
-      nurseItems.value.forEach(item => {
-        if (selectedItems.value.includes(item.id)) {
-          configTableRef.value.toggleRowSelection(item, true)
-        }
-      })
-    }
+  
   } catch (e) {
     console.error('获取护理项目失败', e)
   } finally {

@@ -67,24 +67,29 @@ onMounted(() => {
     </div>
 
     <el-table :data="customerList" v-loading="loading" stripe style="width: 100%">
-      <el-table-column prop="customerName" label="姓名" width="100" />
-      <el-table-column prop="customerSex" label="性别" width="60">
+      <el-table-column prop="customerName" label="姓名" min-width="100" />
+      <el-table-column prop="customerSex" label="性别" min-width="60">
         <template #default="{ row }">
           {{ getGenderText(row.customerSex) }}
         </template>
       </el-table-column>
-      <el-table-column prop="customerAge" label="年龄" width="70" />
-      <el-table-column prop="bedNo" label="床位号" width="120" />
-      <el-table-column prop="levelName" label="护理级别" width="120">
+      <el-table-column prop="customerAge" label="年龄" min-width="70" />
+      <el-table-column prop="bedNo" label="床位号" min-width="120" />
+      <el-table-column prop="levelName" label="护理级别" min-width="120">
         <template #default="{ row }">
           <el-tag size="small" v-if="row.levelName">{{ row.levelName }}</el-tag>
           <span v-else class="empty-text">未设置</span>
         </template>
       </el-table-column>
-      <el-table-column prop="checkinDate" label="入住日期" width="120" />
-      <el-table-column label="操作" width="120" fixed="right">
+      <el-table-column prop="checkinDate" label="入住日期" min-width="120" />
+      <el-table-column label="操作" min-width="120" fixed="right">
         <template #default="{ row }">
-          <el-button type="primary" link size="small" @click="handleConfig(row)">配置护理</el-button>
+          <template v-if="row.levelName == null">
+            <el-button type="primary" link size="small" @click="handleConfig(row)">设置护理级别</el-button>
+          </template>
+          <template v-else>
+            <el-button type="primary" link size="small" @click="handleConfig(row)">移除护理级别</el-button>
+          </template>
         </template>
       </el-table-column>
     </el-table>
@@ -93,14 +98,14 @@ onMounted(() => {
       <el-pagination background layout="total, prev, pager, next" :total="customerList.length" :page-size="10" />
     </div>
 
-    <el-dialog v-model="dialogVisible" title="配置客户护理" width="500px">
+    <el-dialog v-model="dialogVisible" title="配置客户护理" min-width="500px">
       <div class="customer-info-dialog">
         <span>客户：{{ currentCustomer?.customerName }}</span>
         <span style="margin-left: 20px">床位：{{ currentCustomer?.bedNo }}</span>
       </div>
       <el-form :model="form" label-width="100px" style="margin-top: 20px">
         <el-form-item label="护理级别">
-          <el-select v-model="form.levelId" placeholder="请选择护理级别" style="width: 100%">
+          <el-select v-model="form.levelId" placeholder="请选择护理级别" style="min-width: 100%">
             <el-option v-for="level in careLevels" :key="level.id" :label="level.levelName" :value="level.id" />
           </el-select>
         </el-form-item>

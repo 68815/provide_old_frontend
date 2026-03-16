@@ -124,23 +124,24 @@ onMounted(() => {
     </div>
 
     <el-table :data="itemList" v-loading="loading" stripe style="width: 100%">
-      <el-table-column prop="nursingName" label="项目名称" width="150" />
+      <el-table-column prop="serialNumber" label="编号" min-width="120" />
+      <el-table-column prop="nursingName" label="项目名称" min-width="150" />
       <el-table-column prop="message" label="描述" />
-      <el-table-column prop="servicePrice" label="价格(元)" width="100">
+      <el-table-column prop="servicePrice" label="价格(元)" min-width="100">
         <template #default="{ row }">
           <span style="color: #f56c6c">¥{{ row.servicePrice }}</span>
         </template>
       </el-table-column>
-      <el-table-column prop="executionCycle" label="执行周期" width="100" />
-      <el-table-column prop="executionTimes" label="执行次数" width="100" />
-      <el-table-column prop="status" label="状态" width="100">
+      <el-table-column prop="executionCycle" label="执行周期" min-width="100" />
+      <el-table-column prop="executionTimes" label="执行次数" min-width="100" />
+      <el-table-column prop="status" label="状态" min-width="100">
         <template #default="{ row }">
           <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
             {{ row.status === 1 ? '启用' : '禁用' }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="180" fixed="right">
+      <el-table-column label="操作" min-width="180" fixed="right">
         <template #default="{ row }">
           <el-button type="primary" link size="small" @click="handleEdit(row)">编辑</el-button>
           <el-button type="danger" link size="small" @click="handleDelete(row)">删除</el-button>
