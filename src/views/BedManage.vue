@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { bedApi } from '../api'
+import { bedApi, roomApi } from '../api'
+import { ElMessage } from 'element-plus'
 
 const loading = ref(false)
 const recordList = ref([])
@@ -10,6 +11,47 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 const isDeleted = ref(0)
+
+const dialogVisible = ref(false)
+const formRef = ref(null)
+const bedOptions = ref([])
+
+const detailDialogVisible = ref(false)
+const detailFormRef = ref(null)
+
+const exchangeForm = ref({
+  id: null,
+  customerId: null,
+  customerName: '',
+  oldBedId: null,
+  oldRoomNo: '',
+  newBedId: null,
+  newRoomNo: '',
+  buildingNo: '',
+  endDate: '',
+})
+
+const detailForm = ref({
+  id: null,
+  customerId: null,
+  customerName: '',
+  bedId: null,
+  roomNo: '',
+  bedDetails: '',
+  startDate: '',
+  endDate: '',
+  isDeleted: 0,
+})
+
+const detailRules = {
+  endDate: [{ required: true, message: '请选择床位结束日期', trigger: 'change' }],
+}
+
+const rules = {
+  newBedId: [{ required: true, message: '请选择新床位', trigger: 'change' }],
+  newRoomNo: [{ required: true, message: '请输入新房间号', trigger: 'blur' }],
+  buildingNo: [{ required: true, message: '请输入新楼号', trigger: 'blur' }],
+}
 
 const isDeletedOptions = [
   { label: '正在使用', value: 0 },
@@ -32,6 +74,111 @@ const fetchData = async () => {
     }
   } finally {
     loading.value = false
+  }
+}
+
+const bedExchange = async (row) => {
+  exchangeForm.value = {
+    id: row.id,
+    customerId: row.customerId,
+    customerName: row.customerName,
+    oldBedId: row.bedId,
+    oldRoomNo: row.roomNo,
+    newBedId: null,
+    newRoomNo: '',
+    buildingNo: '',
+    endDate: row.endDate,
+  }
+  await fetchAvailableBeds()
+  dialogVisible.value = true
+}
+
+const fetchAvailableBeds = async () => {
+  try {
+    const res = await roomApi.getCwsyBedVo('')
+    if (res.flag && res.data) {
+      bedOptions.value = res.data.map(item => ({
+        label: `${item.roomNo} - ${item.bedNo}`,
+        value: item.bedId,
+        roomNo: item.roomNo,
+      }))
+    }
+  } catch (error) {
+    console.error('获取可用床位失败', error)
+  }
+}
+
+const handleBedChange = (bedId) => {
+  const selected = bedOptions.value.find(b => b.value === bedId)
+  if (selected) {
+    exchangeForm.value.newRoomNo = selected.roomNo
+  }
+}
+
+const handleSubmit = async () => {
+  const valid = await formRef.value.validate().catch(() => false)
+  if (!valid) return
+  
+  try {
+    const res = await bedApi.exchangeBed({
+      id: exchangeForm.value.id,
+      customerId: exchangeForm.value.customerId,
+      oldBedId: exchangeForm.value.oldBedId,
+      newBedId: exchangeForm.value.newBedId,
+      newRoomNo: exchangeForm.value.newRoomNo,
+      buildingNo: exchangeForm.value.buildingNo,
+      endDate: exchangeForm.value.endDate,
+    })
+    if (res.flag) {
+      ElMessage.success('床位调换成功')
+      dialogVisible.value = false
+      fetchData()
+    } else {
+      ElMessage.error(res.message || '调换失败')
+    }
+  } catch (error) {
+    ElMessage.error(error.message || '调换失败')
+  }
+}
+
+const showDetail = (row) => {
+  detailForm.value = {
+    id: row.id,
+    customerId: row.customerId,
+    customerName: row.customerName,
+    bedId: row.bedId,
+    roomNo: row.roomNo,
+    bedDetails: row.bedDetails,
+    startDate: row.startDate,
+    endDate: row.endDate,
+    isDeleted: row.isDeleted,
+  }
+  detailDialogVisible.value = true
+}
+
+const handleDetailSubmit = async () => {
+  const valid = await detailFormRef.value.validate().catch(() => false)
+  if (!valid) return
+  
+  try {
+    const res = await bedApi.updateBedDetails({
+      id: detailForm.value.id,
+      bedId: detailForm.value.bedId,
+      customerId: detailForm.value.customerId,
+      startDate: detailForm.value.startDate,
+      endDate: detailForm.value.endDate,
+      bedDetails: detailForm.value.bedDetails,
+      isDeleted: detailForm.value.isDeleted,
+    })
+    if (res.flag) {
+      ElMessage.success('更新成功')
+      detailDialogVisible.value = false
+      fetchData()
+    } else {
+      ElMessage.error(res.message || '更新失败')
+    }
+  } catch (error) {
+    ElMessage.error(error.message || '更新失败')
   }
 }
 
@@ -106,7 +253,8 @@ onMounted(() => {
 
       <el-table-column label="操作" width="120" fixed="right" header-align="left">
         <template #default="{ row }">
-          <el-button type="primary" link size="small">详情</el-button>
+          <el-button type="primary" link size="small" @click = "bedExchange(row)">床位调换</el-button>
+          <el-button type="primary" link size="small" @click="showDetail(row)">详情</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -121,6 +269,75 @@ onMounted(() => {
         @current-change="handlePageChange"
       />
     </div>
+
+    <el-dialog v-model="dialogVisible" title="床位调换" width="500px">
+      <el-form ref="formRef" :model="exchangeForm" :rules="rules" label-width="100px">
+        <el-form-item label="客户姓名">
+          <el-input v-model="exchangeForm.customerName" disabled />
+        </el-form-item>
+        <el-form-item label="床位结束使用日期">
+          <el-input v-model="exchangeForm.endDate" disabled />
+        </el-form-item>
+        <el-form-item label="原房间号">
+          <el-input v-model="exchangeForm.oldRoomNo" disabled />
+        </el-form-item>
+        <el-form-item label="新床位" prop="newBedId">
+          <el-select 
+            v-model="exchangeForm.newBedId" 
+            placeholder="请选择新床位" 
+            style="width: 100%"
+            @change="handleBedChange"
+          >
+            <el-option 
+              v-for="item in bedOptions" 
+              :key="item.value" 
+              :label="item.label" 
+              :value="item.value" 
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="新房间号" prop="newRoomNo">
+          <el-input v-model="exchangeForm.newRoomNo" placeholder="请输入新房间号" />
+        </el-form-item>
+        <el-form-item label="新楼号" prop="buildingNo">
+          <el-input v-model="exchangeForm.buildingNo" placeholder="请输入新楼号" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleSubmit">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="detailDialogVisible" title="床位详情" width="500px">
+      <el-form ref="detailFormRef" :model="detailForm" :rules="detailRules" label-width="120px">
+        <el-form-item label="客户姓名">
+          <el-input v-model="detailForm.customerName" disabled />
+        </el-form-item>
+        <el-form-item label="房间号">
+          <el-input v-model="detailForm.roomNo" disabled />
+        </el-form-item>
+        <el-form-item label="床位详情">
+          <el-input v-model="detailForm.bedDetails" disabled />
+        </el-form-item>
+        <el-form-item label="床位使用起始日期">
+          <el-input v-model="detailForm.startDate" disabled />
+        </el-form-item>
+        <el-form-item label="床位使用结束日期" prop="endDate">
+          <el-date-picker
+            v-model="detailForm.endDate"
+            type="datetime"
+            placeholder="请选择床位结束日期"
+            style="width: 100%"
+            value-format="YYYY-MM-DD HH:mm:ss"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="detailDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleDetailSubmit">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
