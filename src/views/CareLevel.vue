@@ -1,13 +1,20 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { nurseLevelApi } from '../api'
+import { nurseLevelApi, nurseItemApi } from '../api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const loading = ref(false)
 const levelList = ref([])
+const nurseItems = ref([])
+const selectedItems = ref([])
+const currentLevelId = ref(null)
+
 const dialogVisible = ref(false)
 const dialogTitle = ref('添加护理级别')
 const formRef = ref(null)
+
+const configDialogVisible = ref(false)
+const configLoading = ref(false)
 
 const form = ref({
   id: null,
@@ -22,7 +29,7 @@ const rules = {
 const fetchData = async () => {
   loading.value = true
   try {
-    const res = await nurseLevelApi.getNurseLevelList({})
+    const res = await nurseLevelApi.getNurseLevelList({ isDeleted: 0 })
     if (res.flag && res.data) {
       levelList.value = res.data
     }
@@ -56,7 +63,46 @@ const handleDelete = (row) => {
     } else {
       ElMessage.error(res.message || '删除失败')
     }
-  })
+  }).catch(() => {})
+}
+
+const handleConfig = async (row) => {
+  currentLevelId.value = row.id
+  configLoading.value = true
+  configDialogVisible.value = true
+  
+  try {
+    const [allItemsRes, selectedItemsRes] = await Promise.all([
+      nurseItemApi.getNurseItemList({}),
+      nurseLevelApi.getNurseItemsByLevel(row.id)
+    ])
+    
+    if (allItemsRes.flag && allItemsRes.data) {
+      nurseItems.value = allItemsRes.data.records || allItemsRes.data || []
+    }
+    
+    if (selectedItemsRes.flag && selectedItemsRes.data) {
+      selectedItems.value = selectedItemsRes.data.map(item => item.id || item.itemId)
+    }
+  } catch (e) {
+    console.error('获取护理项目失败', e)
+  } finally {
+    configLoading.value = false
+  }
+}
+
+const handleConfigSubmit = async () => {
+  const newItems = selectedItems.value
+  
+  try {
+    for (const itemId of newItems) {
+      await nurseLevelApi.addItemToLevel(currentLevelId.value, itemId)
+    }
+    ElMessage.success('配置成功')
+    configDialogVisible.value = false
+  } catch (e) {
+    ElMessage.error('配置失败')
+  }
 }
 
 const handleSubmit = async () => {
@@ -99,17 +145,18 @@ onMounted(() => {
     </div>
 
     <el-table :data="levelList" v-loading="loading" stripe style="width: 100%">
-      <el-table-column prop="levelName" label="级别名称" width="200" />
-      <el-table-column prop="levelStatus" label="状态" width="120">
+      <el-table-column prop="levelName" label="级别名称" width="200" header-align="left" />
+      <el-table-column prop="levelStatus" label="状态" width="150" header-align="left">
         <template #default="{ row }">
           <el-tag :type="row.levelStatus === 1 ? 'success' : 'info'" size="small">
             {{ row.levelStatus === 1 ? '启用' : '禁用' }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="180" fixed="right">
+      <el-table-column label="操作" width="150" fixed="right" header-align="left">
         <template #default="{ row }">
-          <el-button type="primary" link size="small" @click="handleEdit(row)">编辑</el-button>
+          <el-button type="primary" link size="small" @click="handleEdit(row)">修改</el-button>
+          <el-button type="warning" link size="small" @click="handleConfig(row)">护理项目配置</el-button>
           <el-button type="danger" link size="small" @click="handleDelete(row)">删除</el-button>
         </template>
       </el-table-column>
@@ -130,6 +177,25 @@ onMounted(() => {
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" @click="handleSubmit">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="configDialogVisible" title="护理项目配置" width="600px">
+      <div v-loading="configLoading">
+        <el-checkbox-group v-model="selectedItems">
+          <el-checkbox 
+            v-for="item in nurseItems" 
+            :key="item.id" 
+            :value="item.id"
+            :label="item.id"
+          >
+            {{ item.itemName }}
+          </el-checkbox>
+        </el-checkbox-group>
+      </div>
+      <template #footer>
+        <el-button @click="configDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleConfigSubmit">确定</el-button>
       </template>
     </el-dialog>
   </div>

@@ -11,7 +11,7 @@ export const nurseLevelApi = {
   },
 
   addNurseLevel: (data) => {
-    return post('/nurselevel/addNurseLevel', {
+    return postJson('/nurselevel/addNurseLevel', {
       levelName: data.name,
       levelStatus: data.status || 1,
       isDeleted: 0,
@@ -19,7 +19,7 @@ export const nurseLevelApi = {
   },
 
   updateNurseLevel: (data) => {
-    return post('/nurselevel/updateNurseLevel', {
+    return postJson('/nurselevel/updateNurseLevel', {
       id: data.id,
       levelName: data.name,
       levelStatus: data.status,
@@ -36,7 +36,7 @@ export const nurseLevelApi = {
   },
 
   addItemToLevel: (levelId, itemId) => {
-    return post('/nurselevel/addItemToLevel', { levelId, itemId })
+    return postJson('/nurselevel/addItemToLevel', { levelId, itemId })
   },
 
   removeNurseLevelItem: (levelId, itemId) => {
@@ -54,7 +54,7 @@ export const nurseItemApi = {
   },
 
   addNurseItem: (data) => {
-    return post('/nursecontent/addNurseItem', {
+    return postJson('/nursecontent/addNurseItem', {
       nursingName: data.name,
       message: data.description,
       serialNumber: data.serialNumber,
@@ -67,7 +67,7 @@ export const nurseItemApi = {
   },
 
   updateNurseItem: (data) => {
-    return post('/nursecontent/updateNurseItem', {
+    return postJson('/nursecontent/updateNurseItem', {
       id: data.id,
       nursingName: data.name,
       message: data.description,
@@ -94,7 +94,7 @@ export const nurseRecordApi = {
   },
 
   addNurseRecord: (data) => {
-    return post('/nurserecord/addNurseRecord', {
+    return postJson('/nurserecord/addNurseRecord', {
       customerId: data.customerId,
       itemId: data.itemId,
       nursingContent: data.content,
@@ -123,7 +123,7 @@ export const customerNurseItemApi = {
   },
 
   enewNurseItem: (data) => {
-    return post('/customernurseitem/enewNurseItem', {
+    return postJson('/customernurseitem/enewNurseItem', {
       id: data.id,
       custormerId: data.customerId,
       itemId: data.itemId,
