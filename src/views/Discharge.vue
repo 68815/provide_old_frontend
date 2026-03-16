@@ -213,10 +213,10 @@ onMounted(() => {
         <el-form-item label="退住时间" prop="retreatTime">
           <el-date-picker
             v-model="form.retreatTime"
-            type="datetime"
+            type="date"
             placeholder="请选择退住时间"
             style="width: 100%"
-            value-format="YYYY-MM-DD HH:mm:ss"
+            value-format="YYYY-MM-DD"
           />
         </el-form-item>
         <el-form-item label="退住类型" prop="retreatType">
