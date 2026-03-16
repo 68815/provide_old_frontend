@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { nurseLevelApi, nurseItemApi } from '../api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -15,6 +15,7 @@ const formRef = ref(null)
 
 const configDialogVisible = ref(false)
 const configLoading = ref(false)
+const configTableRef = ref(null)
 
 const form = ref({
   id: null,
@@ -70,6 +71,7 @@ const handleConfig = async (row) => {
   currentLevelId.value = row.id
   configLoading.value = true
   configDialogVisible.value = true
+  selectedItems.value = []
   
   try {
     const [allItemsRes, selectedItemsRes] = await Promise.all([
@@ -82,13 +84,26 @@ const handleConfig = async (row) => {
     }
     
     if (selectedItemsRes.flag && selectedItemsRes.data) {
-      selectedItems.value = selectedItemsRes.data.map(item => item.id || item.itemId)
+      selectedItems.value = selectedItemsRes.data.map(item => item.id)
+    }
+    
+    await nextTick()
+    if (configTableRef.value) {
+      nurseItems.value.forEach(item => {
+        if (selectedItems.value.includes(item.id)) {
+          configTableRef.value.toggleRowSelection(item, true)
+        }
+      })
     }
   } catch (e) {
     console.error('获取护理项目失败', e)
   } finally {
     configLoading.value = false
   }
+}
+
+const handleSelectionChange = (selection) => {
+  selectedItems.value = selection.map(item => item.id)
 }
 
 const handleConfigSubmit = async () => {
@@ -145,15 +160,15 @@ onMounted(() => {
     </div>
 
     <el-table :data="levelList" v-loading="loading" stripe style="width: 100%">
-      <el-table-column prop="levelName" label="级别名称" width="200" header-align="left" />
-      <el-table-column prop="levelStatus" label="状态" width="150" header-align="left">
+      <el-table-column prop="levelName" label="级别名称" min-width="100" header-align="left" />
+      <el-table-column prop="levelStatus" label="状态" min-width="150" header-align="left">
         <template #default="{ row }">
           <el-tag :type="row.levelStatus === 1 ? 'success' : 'info'" size="small">
             {{ row.levelStatus === 1 ? '启用' : '禁用' }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="150" fixed="right" header-align="left">
+      <el-table-column label="操作" min-width="150" fixed="right" header-align="left">
         <template #default="{ row }">
           <el-button type="primary" link size="small" @click="handleEdit(row)">修改</el-button>
           <el-button type="warning" link size="small" @click="handleConfig(row)">护理项目配置</el-button>
@@ -180,18 +195,22 @@ onMounted(() => {
       </template>
     </el-dialog>
 
-    <el-dialog v-model="configDialogVisible" title="护理项目配置" width="600px">
+    <el-dialog v-model="configDialogVisible" title="护理项目配置" width="700px">
       <div v-loading="configLoading">
-        <el-checkbox-group v-model="selectedItems">
-          <el-checkbox 
-            v-for="item in nurseItems" 
-            :key="item.id" 
-            :value="item.id"
-            :label="item.id"
-          >
-            {{ item.itemName }}
-          </el-checkbox>
-        </el-checkbox-group>
+        <el-table 
+          ref="configTableRef"
+          :data="nurseItems" 
+          stripe 
+          @selection-change="handleSelectionChange"
+          style="width: 100%"
+        >
+          <el-table-column type="selection" width="50" />
+          <el-table-column prop="serialNumber" label="编号" min-width="80" header-align="left" />
+          <el-table-column prop="nursingName" label="护理项目名称" min-width="120" header-align="left" />
+          <el-table-column prop="executionCycle" label="执行周期" min-width="80" header-align="left" />
+          <el-table-column prop="executionTimes" label="执行次数" min-width="80" header-align="left" />
+          <el-table-column prop="servicePrice" label="价格" min-width="80" header-align="left" />
+        </el-table>
       </div>
       <template #footer>
         <el-button @click="configDialogVisible = false">取消</el-button>

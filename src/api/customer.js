@@ -1,4 +1,4 @@
-import { get, post, postJson } from './request'
+import { get, postJson } from './request'
 
 export const customerApi = {
   getCustomerList: (params) => {
@@ -65,14 +65,14 @@ export const customerApi = {
 
 export const outwardApi = {
   getOutwardList: (params) => {
-    return post('/outward/queryOutwardVo', {
+    return postJson('/outward/queryOutwardVo', {
       pageSize: params.page || 1,
       userId: params.userId,
     })
   },
 
   addOutward: (data) => {
-    return post('/outward/queryOutwardVo', {
+    return postJson('/outward/addOutward', {
       customer_id: data.customerId,
       outgoingreason: data.reason,
       outgoingtime: data.startTime,

@@ -1,4 +1,4 @@
-import { get, post } from './request'
+import { get, postJson } from './request'
 
 export const userApi = {
   login: (username, password) => {
@@ -14,7 +14,7 @@ export const userApi = {
   },
 
   addUser: (data) => {
-    return post('/user/addUser', {
+    return postJson('/user/addUser', {
       username: data.username,
       password: data.password,
       nickname: data.nickname,
@@ -27,7 +27,7 @@ export const userApi = {
   },
 
   updateUser: (data) => {
-    return post('/user/updateUser', {
+    return postJson('/user/updateUser', {
       id: data.id,
       username: data.username,
       nickname: data.nickname,

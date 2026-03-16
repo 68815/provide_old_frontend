@@ -1,4 +1,4 @@
-import { get, post } from './request'
+import { get, postJson } from './request'
 
 export const bedApi = {
   getBedList: (params) => {
@@ -22,7 +22,7 @@ export const bedApi = {
   },
 
   updateBedDetails: (data) => {
-    return post('/beddetails/updateBedDetails', {
+    return postJson('/beddetails/updateBedDetails', {
       id: data.id,
       bedId: data.bedId,
       customerId: data.customerId,
@@ -34,7 +34,7 @@ export const bedApi = {
   },
 
   exchangeBed: (data) => {
-    return post('/beddetails/exchangeBed', {
+    return postJson('/beddetails/exchangeBed', {
       id: data.id,
       customerId: data.customerId,
       oldBedId: data.oldBedId,
