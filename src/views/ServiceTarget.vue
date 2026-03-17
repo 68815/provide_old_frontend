@@ -18,19 +18,27 @@ const fetchData = async () => {
     if (res.flag && res.data) {
       butlerList.value = res.data.records || res.data
     }
-    const customerRes = await customerApi.getCustomerList({ page: 1 })
-    if (customerRes.flag && customerRes.data) {
-      customers.value = customerRes.data.records || customerRes.data
-    }
+    
   } finally {
     loading.value = false
   }
 }
 
-const handleConfig = (row) => {
+const handleConfig = async (row) => {
   currentButler.value = row
   selectedCustomers.value = []
   dialogVisible.value = true
+  try {
+    const customerRes = await customerApi.getCustomerList({ 
+      page: 1,
+      manType: 3 
+    })
+    if (customerRes.flag && customerRes.data) {
+      customers.value = customerRes.data.records || customerRes.data
+    }
+  } catch (e) {
+    console.error('获取客户列表失败', e)
+  }
 }
 
 const handleSubmit = async () => {
@@ -50,11 +58,20 @@ onMounted(() => {
     </div>
 
     <el-table :data="butlerList" v-loading="loading" stripe style="width: 100%">
-      <el-table-column prop="nickname" label="健康管家" width="150" />
-      <el-table-column prop="phoneNumber" label="联系电话" width="150" />
-      <el-table-column label="操作" width="120" fixed="right">
+      <el-table-column type="index" label="序号" min-width="50" />
+      <el-table-column prop="nickname" label="健康管家" min-width="150" />
+      <el-table-column prop="sex" label="性别" min-width="150" >
         <template #default="{ row }">
-          <el-button type="primary" link size="small" @click="handleConfig(row)">配置客户</el-button>
+          <el-tag :type="row.sex === 1 ? 'success' : 'info'" size="small">
+            {{ row.sex === 1 ? '男' : '女' }}
+          </el-tag>
+        </template>      
+      </el-table-column>
+      <el-table-column prop="phoneNumber" label="联系电话" min-width="150" />
+      <el-table-column prop="email" label="邮箱" min-width="150" />
+      <el-table-column label="操作" min-width="120" fixed="right">
+        <template #default="{ row }">
+          <el-button type="primary" link size="small" @click="handleConfig(row)">设置服务对象</el-button>
         </template>
       </el-table-column>
     </el-table>
