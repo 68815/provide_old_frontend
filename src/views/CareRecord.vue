@@ -35,6 +35,11 @@ const fetchData = async () => {
     const customerRes = await customerApi.getCustomerList({ page: 1 })
     if (customerRes.flag && customerRes.data) {
       customers.value = customerRes.data.records || customerRes.data
+      recordList.value.forEach(record => {
+        record.customerName = customers.value.find(c => c.id === record.customerId)?.customerName || ''
+        record.bedNo = customers.value.find(c => c.id === record.customerId)?.bedNo || ''
+        record.itemName = careItems.value.find(i => i.id === record.itemId)?.nursingName || ''
+      })
     }
     const itemRes = await nurseItemApi.getNurseItemList({})
     if (itemRes.flag && itemRes.data) {
@@ -84,23 +89,23 @@ onMounted(() => {
     </div>
 
     <el-table :data="recordList" v-loading="loading" stripe style="width: 100%">
-      <el-table-column prop="customerName" label="客户姓名" width="100" />
-      <el-table-column prop="bedNo" label="床位号" width="120" />
-      <el-table-column prop="itemName" label="护理项目" width="120">
+      <el-table-column prop="customerName" label="客户姓名" min-width="100" />
+      <el-table-column prop="bedNo" label="床位号" min-width="120" />
+      <el-table-column prop="itemName" label="护理项目" min-width="120">
         <template #default="{ row }">
           <el-tag size="small">{{ row.itemName || row.nursingName }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="nursingTime" label="护理时间" width="160" />
-      <el-table-column prop="nursingContent" label="护理内容" />
-      <el-table-column prop="nursingCount" label="护理次数" width="100" />
+      <el-table-column prop="nursingTime" label="护理时间" min-width="160" />
+      <el-table-column prop="nursingContent" label="护理内容" min-width="200" />
+      <el-table-column prop="nursingCount" label="护理次数" min-width="100" />
     </el-table>
 
     <div class="pagination-wrap">
       <el-pagination background layout="total, prev, pager, next" :total="recordList.length" :page-size="10" />
     </div>
 
-    <el-dialog v-model="dialogVisible" title="添加护理记录" width="500px">
+    <el-dialog v-model="dialogVisible" title="添加护理记录" min-width="500px">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
         <el-form-item label="客户" prop="customerId">
           <el-select v-model="form.customerId" placeholder="请选择客户" filterable style="width: 100%">
