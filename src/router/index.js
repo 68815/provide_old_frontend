@@ -14,10 +14,17 @@ import ServiceTarget from '../views/ServiceTarget.vue'
 import ServiceFocus from '../views/ServiceFocus.vue'
 import UserManage from '../views/UserManage.vue'
 import Placeholder from '../views/Placeholder.vue'
+import Login from '../views/Login.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    {
+      path: '/login',
+      name: 'login',
+      component: Login,
+      meta: { title: '登录' },
+    },
     {
       path: '/',
       component: MainLayout,
@@ -110,6 +117,17 @@ const router = createRouter({
       ],
     },
   ],
+})
+
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem('token')
+  if (to.path !== '/login' && !token) {
+    next('/login')
+  } else if (to.path === '/login' && token) {
+    next('/')
+  } else {
+    next()
+  }
 })
 
 export default router

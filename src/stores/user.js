@@ -6,9 +6,10 @@ export const useUserStore = defineStore('user', () => {
   const userInfo = ref(JSON.parse(localStorage.getItem('userInfo') || 'null'))
 
   const isLoggedIn = computed(() => !!token.value)
-  const username = computed(() => userInfo.value?.name || userInfo.value?.username || '未登录')
-  const role = computed(() => userInfo.value?.role || '')
-  const isAdmin = computed(() => userInfo.value?.role === 'admin')
+  const username = computed(() => userInfo.value?.nickname || userInfo.value?.username || '未登录')
+  const roleId = computed(() => userInfo.value?.roleId || 0)
+  const isAdmin = computed(() => roleId.value === 1)
+  const isButler = computed(() => roleId.value === 2)
 
   function setToken(newToken) {
     token.value = newToken
@@ -22,7 +23,7 @@ export const useUserStore = defineStore('user', () => {
 
   function login(data) {
     setToken(data.token || 'mock-token')
-    setUserInfo(data.user || data)
+    setUserInfo(data)
   }
 
   function logout() {
@@ -42,8 +43,9 @@ export const useUserStore = defineStore('user', () => {
     userInfo,
     isLoggedIn,
     username,
-    role,
+    roleId,
     isAdmin,
+    isButler,
     setToken,
     setUserInfo,
     login,

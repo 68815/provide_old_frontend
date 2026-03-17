@@ -31,47 +31,72 @@ function closeTab(path) {
   }
 }
 
-const menuItems = [
-  {
-    title: '床位管理',
-    children: [
-      { path: '/bed-layout', title: '床位示意图' },
-      { path: '/bed-manage', title: '床位管理' },
-    ],
-  },
-  {
-    title: '客户管理',
-    children: [
-      { path: '/customer-list', title: '客户信息' },
-      { path: '/admission', title: '入住登记' },
-      { path: '/outing', title: '外出登记' },
-      { path: '/discharge', title: '退住登记' },
-    ],
-  },
-  {
-    title: '护理管理',
-    children: [
-      { path: '/care-level', title: '护理级别' },
-      { path: '/care-items', title: '护理项目' },
-      { path: '/client-care', title: '客户护理设置' },
-      { path: '/care-record', title: '护理记录' },
-    ],
-  },
-  {
-    title: '健康管家',
-    children: [
-      { path: '/service-target', title: '设置服务对象' },
-      { path: '/service-focus', title: '服务关注' },
-    ],
-  },
-  {
-    title: '系统管理',
-    children: [
-      { path: '/user-manage', title: '用户管理' },
-      { path: '/basic-data', title: '基础数据维护' },
-    ],
-  },
-]
+const menuItems = computed(() => {
+  if (userStore.isButler) {
+    return [
+      {
+        title: '客户管理',
+        children: [
+          { path: '/outing', title: '外出信息' },
+          { path: '/discharge', title: '退住登记' },
+        ],
+      },
+      {
+        title: '护理管理',
+        children: [
+          { path: '/care-record', title: '护理记录' },
+        ],
+      },
+      {
+        title: '健康管家',
+        children: [
+          { path: '/service-focus', title: '服务关注' },
+        ],
+      },
+    ]
+  }
+  return [
+    {
+      title: '床位管理',
+      children: [
+        { path: '/bed-layout', title: '床位示意图' },
+        { path: '/bed-manage', title: '床位管理' },
+      ],
+    },
+    {
+      title: '客户管理',
+      children: [
+        { path: '/customer-list', title: '客户信息' },
+        { path: '/admission', title: '入住登记' },
+        { path: '/outing', title: '外出登记' },
+        { path: '/discharge', title: '退住登记' },
+      ],
+    },
+    {
+      title: '护理管理',
+      children: [
+        { path: '/care-level', title: '护理级别' },
+        { path: '/care-items', title: '护理项目' },
+        { path: '/client-care', title: '客户护理设置' },
+        { path: '/care-record', title: '护理记录' },
+      ],
+    },
+    {
+      title: '健康管家',
+      children: [
+        { path: '/service-target', title: '设置服务对象' },
+        { path: '/service-focus', title: '服务关注' },
+      ],
+    },
+    {
+      title: '系统管理',
+      children: [
+        { path: '/user-manage', title: '用户管理' },
+        { path: '/basic-data', title: '基础数据维护' },
+      ],
+    },
+  ]
+})
 
 const userMenuItems = [
   { label: '个人中心', command: 'profile' },
