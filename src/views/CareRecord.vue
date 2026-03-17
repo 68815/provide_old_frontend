@@ -1,7 +1,10 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { nurseRecordApi, customerApi, nurseItemApi } from '../api'
+import { useUserStore } from '../stores/user'
 import { ElMessage } from 'element-plus'
+
+const userStore = useUserStore()
 
 const loading = ref(false)
 const recordList = ref([])
@@ -20,10 +23,13 @@ const rules = {
   customerId: [{ required: true, message: '请选择客户', trigger: 'change' }],
   itemId: [{ required: true, message: '请选择护理项目', trigger: 'change' }],
   content: [{ required: true, message: '请输入护理内容', trigger: 'blur' }],
+  time: [{ required: true, message: '请输入护理时间', trigger: 'blur' }],
 }
 
 const customers = ref([])
 const careItems = ref([])
+
+const canAddRecord = computed(() => userStore.isButler)
 
 const fetchData = async () => {
   loading.value = true
@@ -56,6 +62,11 @@ const handleAdd = () => {
 }
 
 const handleSubmit = async () => {
+  if (!userStore.isButler) {
+    ElMessage.warning('只有健康管家才能添加护理记录')
+    return
+  }
+  
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
   
@@ -65,6 +76,7 @@ const handleSubmit = async () => {
     content: form.value.content,
     count: form.value.count,
     time: form.value.time,
+    userId: userStore.userInfo.id,
   })
   
   if (res.flag) {
@@ -85,7 +97,7 @@ onMounted(() => {
   <div class="care-record-page">
     <div class="filter-bar">
       <div class="page-title">护理记录</div>
-      <el-button type="primary" @click="handleAdd">添加护理记录</el-button>
+      <el-button type="primary" @click="handleAdd" v-if="canAddRecord">添加护理记录</el-button>
     </div>
 
     <el-table :data="recordList" v-loading="loading" stripe style="width: 100%">
@@ -117,7 +129,7 @@ onMounted(() => {
             <el-option v-for="item in careItems" :key="item.id" :label="item.nursingName" :value="item.id" />
           </el-select>
         </el-form-item>
-        <el-form-item label="护理时间">
+        <el-form-item label="护理时间" prop="time">
           <el-date-picker v-model="form.time" type="datetime" placeholder="选择时间" style="width: 100%" value-format="YYYY-MM-DD HH:mm:ss" />
         </el-form-item>
         <el-form-item label="护理内容" prop="content">

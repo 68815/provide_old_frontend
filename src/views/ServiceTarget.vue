@@ -42,7 +42,18 @@ const handleConfig = async (row) => {
 }
 
 const handleSubmit = async () => {
-  ElMessage.success('配置成功')
+  try {
+    const butlerId = currentButler.value.id
+    for (const customerId of selectedCustomers.value) {
+      await customerApi.editCustomer({
+        id: customerId,
+        userId: butlerId,
+      })
+    }
+    ElMessage.success('配置成功')
+  } catch (e) {
+    ElMessage.error('配置失败')
+  }
   dialogVisible.value = false
 }
 

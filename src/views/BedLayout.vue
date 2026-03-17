@@ -82,6 +82,7 @@ onMounted(() => {
       <div class="room-grid" v-if="bedData?.roomList?.length">
         <div class="room-card special-room empty-slot"></div>
         <div 
+          v-if="currentFloor==='一楼'"
           v-for="room in specialRooms" 
           :key="room.id" 
           class="room-card special-room"
