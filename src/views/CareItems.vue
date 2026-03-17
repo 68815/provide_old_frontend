@@ -123,7 +123,7 @@ onMounted(() => {
       <el-button type="primary" @click="handleAdd">添加护理项目</el-button>
     </div>
 
-    <el-table :data="itemList" v-loading="loading" stripe style="width: 100%">
+    <el-table :data="itemList" v-loading="loading" stripe style="width: 100%; height:400px">
       <el-table-column prop="serialNumber" label="编号" min-width="120" />
       <el-table-column prop="nursingName" label="项目名称" min-width="150" />
       <el-table-column prop="message" label="描述" />

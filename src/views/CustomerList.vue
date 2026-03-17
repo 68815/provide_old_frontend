@@ -224,7 +224,7 @@ onMounted(() => {
       </el-radio-group>
     </div>
 
-    <el-table :data="customerList" v-loading="loading" stripe style="width: 100%">
+    <el-table :data="customerList" v-loading="loading" stripe style="width: 100%; height: 400px">
       <el-table-column type="index" label="序号" width="55" />
       <el-table-column prop="customerName" label="姓名" width="100" />
       <el-table-column prop="bloodType" label="血型" width="80" />
@@ -246,7 +246,7 @@ onMounted(() => {
       <el-table-column prop="bedNo" label="床位号" width="120" />
       <el-table-column prop="birthday" label="出生日期" width="120" />
       <el-table-column prop="levelId" label="护理级别" width="100" />
-      <el-table-column prop="userId" label="管家" width="100" />
+      <el-table-column prop="nickName" label="管家" width="100" />
       
       <el-table-column prop="checkinDate" label="入住日期" width="120" />
       
