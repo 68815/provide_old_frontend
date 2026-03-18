@@ -14,7 +14,11 @@ const isDeleted = ref(0)
 
 const dialogVisible = ref(false)
 const formRef = ref(null)
-const bedOptions = ref([])
+
+const roomData = ref([])
+const buildingOptions = ref([])
+const roomNoOptions = ref([])
+const bedNoOptions = ref([])
 
 const detailDialogVisible = ref(false)
 const detailFormRef = ref(null)
@@ -89,30 +93,7 @@ const bedExchange = async (row) => {
     buildingNo: '',
     endDate: row.endDate,
   }
-  await fetchAvailableBeds()
   dialogVisible.value = true
-}
-
-const fetchAvailableBeds = async () => {
-  try {
-    const res = await roomApi.getCwsyBedVo('')
-    if (res.flag && res.data) {
-      bedOptions.value = res.data.map(item => ({
-        label: `${item.roomNo} - ${item.bedNo}`,
-        value: item.bedId,
-        roomNo: item.roomNo,
-      }))
-    }
-  } catch (error) {
-    console.error('获取可用床位失败', error)
-  }
-}
-
-const handleBedChange = (bedId) => {
-  const selected = bedOptions.value.find(b => b.value === bedId)
-  if (selected) {
-    exchangeForm.value.newRoomNo = selected.roomNo
-  }
 }
 
 const handleSubmit = async () => {
@@ -192,8 +173,67 @@ const formatDate = (date) => {
   return date
 }
 
+const loadRoomData = async () => {
+  const res = await roomApi.getRoomList()
+  if (res.flag && res.data) {
+    roomData.value = res.data
+    buildingOptions.value = [...new Set(res.data.map(r => r.roomFloor))].map(f => ({
+      value: f,
+      label: f
+    }))
+  }
+}
+
+const handleBuildingChange = (buildingNo) => {
+  exchangeForm.value.newRoomNo = ''
+  exchangeForm.value.newBedId = null
+  roomNoOptions.value = []
+  bedNoOptions.value = []
+  
+  if (buildingNo) {
+    const rooms = roomData.value.filter(r => r.roomFloor === buildingNo)
+    roomNoOptions.value = [...new Set(rooms.map(r => r.roomNo))].map(no => ({
+      value: no,
+      label: String(no)
+    }))
+  }
+}
+
+const handleRoomNoChange = (roomNo) => {
+  exchangeForm.value.newBedId = null
+  bedNoOptions.value = []
+  
+  const buildingNo = exchangeForm.value.buildingNo
+  if (buildingNo && roomNo) {
+    const room = roomData.value.find(r => r.roomFloor === buildingNo && r.roomNo === roomNo)
+    if (room && room.bedList) {
+      bedNoOptions.value = room.bedList.filter(b => b.bedStatus === 1).map(b => ({
+        value: b.id,
+        label: b.bedNo
+      }))
+    }
+  }
+}
+
+const handleBedChange = (bedId) => {
+  const buildingNo = exchangeForm.value.buildingNo
+  const roomNo = exchangeForm.value.newRoomNo
+  if (buildingNo && roomNo && bedId) {
+    const room = roomData.value.find(r => r.roomFloor === buildingNo && r.roomNo === roomNo)
+    if (room && room.bedList) {
+      const bed = room.bedList.find(b => b.id === bedId)
+      if (bed) {
+        exchangeForm.value.buildingNo = buildingNo
+        exchangeForm.value.newRoomNo = String(roomNo)
+        exchangeForm.value.newBedId = bedId
+      }
+    }
+  }
+}
+
 onMounted(() => {
   fetchData()
+  loadRoomData()
 })
 </script>
 
@@ -281,15 +321,15 @@ onMounted(() => {
         <el-form-item label="原房间号">
           <el-input v-model="exchangeForm.oldRoomNo" disabled />
         </el-form-item>
-        <el-form-item label="新床位" prop="newBedId">
+        <el-form-item label="新楼号" prop="buildingNo">
           <el-select 
-            v-model="exchangeForm.newBedId" 
-            placeholder="请选择新床位" 
+            v-model="exchangeForm.buildingNo" 
+            placeholder="请选择楼号" 
             style="width: 100%"
-            @change="handleBedChange"
+            @change="handleBuildingChange"
           >
             <el-option 
-              v-for="item in bedOptions" 
+              v-for="item in buildingOptions" 
               :key="item.value" 
               :label="item.label" 
               :value="item.value" 
@@ -297,10 +337,35 @@ onMounted(() => {
           </el-select>
         </el-form-item>
         <el-form-item label="新房间号" prop="newRoomNo">
-          <el-input v-model="exchangeForm.newRoomNo" placeholder="请输入新房间号" />
+          <el-select 
+            v-model="exchangeForm.newRoomNo" 
+            placeholder="请选择房间号" 
+            style="width: 100%"
+            :disabled="!exchangeForm.buildingNo"
+            @change="handleRoomNoChange"
+          >
+            <el-option 
+              v-for="item in roomNoOptions" 
+              :key="item.value" 
+              :label="item.label" 
+              :value="item.value" 
+            />
+          </el-select>
         </el-form-item>
-        <el-form-item label="新楼号" prop="buildingNo">
-          <el-input v-model="exchangeForm.buildingNo" placeholder="请输入新楼号" />
+        <el-form-item label="新床位" prop="newBedId">
+          <el-select 
+            v-model="exchangeForm.newBedId" 
+            placeholder="请选择床位" 
+            style="width: 100%"
+            :disabled="!exchangeForm.newRoomNo"
+          >
+            <el-option 
+              v-for="item in bedNoOptions" 
+              :key="item.value" 
+              :label="item.label" 
+              :value="item.value" 
+            />
+          </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
